@@ -27,7 +27,7 @@ const api = async (path, body) => {
     body: JSON.stringify(body),
   });
   const text = await r.text();
-  try { return JSON.parse(text); } catch { return { error: `Server error ${r.status} — try again` }; }
+  try { return JSON.parse(text); } catch { return { error: `${r.status} on ${path}: ${text.slice(0, 80)}` }; }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -397,15 +397,15 @@ function LoginScreen({ serverState, onJoined }) {
     const n = name.trim();
     if (!n) { setErr('Enter your name'); return; }
     setBusy(true); setErr('');
+    const endpoint = noTournament ? '/api/tournament/create' : '/api/join';
     try {
-      const endpoint = noTournament ? '/api/tournament/create' : '/api/join';
       const res = await api(endpoint, { name: n });
       if (res.error) { setErr(res.error); setBusy(false); return; }
       localStorage.setItem('psc_code', res.code);
       localStorage.setItem('psc_name', n);
       setMyCode(res.code);
     } catch (e) {
-      setErr('Network error — check your connection and try again');
+      setErr(`Network error on ${endpoint} — ${e.message}`);
     }
     setBusy(false);
   };
