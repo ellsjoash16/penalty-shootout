@@ -11,7 +11,10 @@ export default async function handler(req, res) {
   if (state.bracket) return res.status(409).json({ error: 'tournament already exists — ask the organiser for your code' });
 
   const bracket = genBracket(name);
-  const mySlot = bracket.r32.flatMap(m => [m.p1, m.p2]).find(s => s.name === name);
+  const mySlot = [
+    ...bracket.wc.flatMap(m => [m.p1, m.p2]),
+    ...bracket.r32.map(m => m.p1),
+  ].find(s => s.name === name);
 
   await saveState({ bracket, activeMatch: null });
   res.json({ ok: true, code: mySlot?.code });

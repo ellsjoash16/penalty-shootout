@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   if (!state.bracket) return res.status(404).json({ error: 'no tournament' });
 
   const all = [
+    ...(state.bracket.wc || []),
     ...state.bracket.r32, ...state.bracket.r16,
     ...state.bracket.qf, ...state.bracket.sf,
     ...(state.bracket.final ? [state.bracket.final] : []),

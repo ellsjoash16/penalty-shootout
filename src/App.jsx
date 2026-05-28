@@ -935,7 +935,125 @@ function SpectatorMatchView({ am }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TOURNAMENT BRACKET
+// BRACKET TREE
+// ═══════════════════════════════════════════════════════════════
+
+const MH = 56;   // match card height
+const MW = 112;  // match card width
+const CG = 28;   // column gap
+
+function BracketTree({ bracket, activeMatch, onMatchClick }) {
+  const colX = c => c * (MW + CG);
+  const TOT_W = colX(5) + MW;
+  const TOT_H = 16 * MH;
+  const HEADER_H = 22;
+  const PX = 8;
+
+  const rawTop = (col, idx) => {
+    if (col <= 1) return idx * MH;
+    const p = Math.pow(2, col - 1);
+    return idx * p * MH + (p / 2 - 0.5) * MH;
+  };
+  const cy = (col, idx) => rawTop(col, idx) + MH / 2;
+
+  const LC = 'rgba(255,255,255,0.1)';
+  const WL = 'rgba(0,230,118,0.22)';
+  const lines = [];
+
+  // WC → R32: dashed green arrows
+  for (let i = 0; i < 16; i++) {
+    const y = cy(0, i);
+    lines.push(<line key={`w${i}`} x1={colX(0)+MW} y1={y} x2={colX(1)} y2={y} stroke={WL} strokeWidth={1.5} strokeDasharray="4 3"/>);
+  }
+  // Bracket connectors: R32→R16, R16→QF, QF→SF, SF→Final
+  [[8,1,2],[4,2,3],[2,3,4],[1,4,5]].forEach(([pairs,sc,dc]) => {
+    const x1=colX(sc)+MW, xm=x1+CG/2, x2=colX(dc);
+    for (let i=0; i<pairs; i++) {
+      const y1=cy(sc,2*i), y2=cy(sc,2*i+1), yd=cy(dc,i);
+      lines.push(
+        <line key={`${sc}a${i}`} x1={x1} y1={y1} x2={xm} y2={y1} stroke={LC} strokeWidth={1.5}/>,
+        <line key={`${sc}b${i}`} x1={x1} y1={y2} x2={xm} y2={y2} stroke={LC} strokeWidth={1.5}/>,
+        <line key={`${sc}c${i}`} x1={xm} y1={y1} x2={xm} y2={y2} stroke={LC} strokeWidth={1.5}/>,
+        <line key={`${sc}d${i}`} x1={xm} y1={yd} x2={x2} y2={yd} stroke={LC} strokeWidth={1.5}/>,
+      );
+    }
+  });
+
+  const ph = (n,k) => Array.from({length:n},(_,i)=>({id:`${k}${i}`,_ph:true}));
+  const rounds = [
+    {col:0, label:'Wild Card', matches:(bracket.wc||[]).length  ? bracket.wc  : ph(16,'wcp')},
+    {col:1, label:'R32',       matches:(bracket.r32||[]).length ? bracket.r32 : ph(16,'r32p')},
+    {col:2, label:'R16',       matches:bracket.r16?.length      ? bracket.r16 : ph(8,'r16p')},
+    {col:3, label:'QF',        matches:bracket.qf?.length       ? bracket.qf  : ph(4,'qfp')},
+    {col:4, label:'SF',        matches:bracket.sf?.length       ? bracket.sf  : ph(2,'sfp')},
+    {col:5, label:'Final',     matches:bracket.final            ? [bracket.final] : ph(1,'finp')},
+  ];
+
+  const TSlot = ({p, won, played, isWCSlot}) => (
+    <div style={{flex:1,display:'flex',alignItems:'center',gap:5,padding:'0 6px',opacity:played&&!won?0.3:1}}>
+      <div style={{width:14,height:14,borderRadius:'50%',flexShrink:0,background:won?'rgba(0,230,118,0.2)':'rgba(255,255,255,0.06)',border:`1px solid ${won?'#00e676':'rgba(255,255,255,0.1)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:6,fontWeight:900,color:won?'#00e676':'rgba(255,255,255,0.3)'}}>
+        {p?.name?.[0]||p?.code?.[0]||'?'}
+      </div>
+      <div style={{flex:1,overflow:'hidden',lineHeight:1}}>
+        {p?.name
+          ? <div style={{color:'#fff',fontSize:9,fontWeight:won?700:400,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+          : p?.code
+            ? <div style={{color:'rgba(255,255,255,0.28)',fontSize:7.5,fontFamily:'monospace',letterSpacing:0.5}}>{p.code}</div>
+            : <div style={{color:'rgba(255,255,255,0.15)',fontSize:8,fontStyle:'italic'}}>{isWCSlot?'WC winner':'TBD'}</div>
+        }
+      </div>
+      {won&&<span style={{color:'#00e676',fontSize:8}}>✓</span>}
+    </div>
+  );
+
+  const PHSlot = () => (
+    <div style={{flex:1,display:'flex',alignItems:'center',gap:5,padding:'0 6px'}}>
+      <div style={{width:14,height:14,borderRadius:'50%',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.04)'}}/>
+      <div style={{color:'rgba(255,255,255,0.1)',fontSize:8,fontStyle:'italic'}}>TBD</div>
+    </div>
+  );
+
+  return (
+    <div style={{overflowX:'auto',overflowY:'auto',flex:1,WebkitOverflowScrolling:'touch',paddingBottom:16}}>
+      <div style={{position:'relative',width:TOT_W+PX*2,height:TOT_H+HEADER_H+12,minWidth:TOT_W+PX*2}}>
+        {rounds.map(({col,label})=>(
+          <div key={col} style={{position:'absolute',left:PX+colX(col),top:4,width:MW,textAlign:'center',color:'rgba(255,255,255,0.2)',fontSize:7,letterSpacing:2,textTransform:'uppercase',fontWeight:600}}>{label}</div>
+        ))}
+        <svg style={{position:'absolute',left:PX,top:HEADER_H,pointerEvents:'none'}} width={TOT_W} height={TOT_H}>
+          {lines}
+        </svg>
+        {rounds.map(({col,matches})=>matches.map((m,idx)=>{
+          const isPH = m._ph;
+          const isActive = !isPH && activeMatch?.matchId===m.id;
+          const canPlay = !isPH && !m.played && m.p1?.name && m.p2?.name && !activeMatch;
+          let bc='rgba(255,255,255,0.07)', bg='rgba(255,255,255,0.015)';
+          if (isPH)       { bc='rgba(255,255,255,0.04)'; bg='transparent'; }
+          else if (isActive)  { bc='rgba(255,215,0,0.65)';  bg='rgba(255,215,0,0.05)'; }
+          else if (m.played)  { bc='rgba(255,255,255,0.05)'; bg='rgba(255,255,255,0.01)'; }
+          else if (canPlay)   { bc='rgba(0,230,118,0.55)';   bg='rgba(0,230,118,0.05)'; }
+          return (
+            <div key={m.id} onClick={()=>canPlay&&onMatchClick(m)} style={{
+              position:'absolute',left:PX+colX(col),top:HEADER_H+rawTop(col,idx),
+              width:MW,height:MH,border:`1px solid ${bc}`,borderRadius:6,background:bg,
+              cursor:canPlay?'pointer':'default',display:'flex',flexDirection:'column',
+              overflow:'hidden',boxSizing:'border-box',
+              boxShadow:isActive?'0 0 12px rgba(255,215,0,0.15)':canPlay?'0 0 8px rgba(0,230,118,0.1)':'none',
+            }}>
+              {isPH ? <PHSlot/> : <TSlot p={m.p1} won={m.winner?.code===m.p1?.code} played={m.played} isWCSlot={false}/>}
+              <div style={{height:1,background:'rgba(255,255,255,0.05)'}}/>
+              {isPH ? <PHSlot/> : <TSlot p={m.p2} won={m.winner?.code===m.p2?.code} played={m.played} isWCSlot={col===1&&!m.p2}/>}
+              {isActive&&<div style={{position:'absolute',inset:'auto 0 0',height:9,background:'rgba(255,215,0,0.15)',display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{color:'#ffd700',fontSize:6,fontWeight:800,letterSpacing:1.5}}>LIVE {activeMatch.p1Score}–{activeMatch.p2Score}</span></div>}
+              {canPlay&&<div style={{position:'absolute',inset:'auto 0 0',height:8,background:'rgba(0,230,118,0.12)',display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{color:'#00e676',fontSize:5.5,fontWeight:800,letterSpacing:1.5}}>▶ PLAY</span></div>}
+            </div>
+          );
+        }))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOURNAMENT SCREEN
 // ═══════════════════════════════════════════════════════════════
 
 function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
@@ -943,7 +1061,7 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const stageLabel = {r32:'ROUND OF 32',r16:'ROUND OF 16',qf:'QUARTER-FINALS',sf:'SEMI-FINALS',final:'FINAL',champion:'CHAMPION'}[bracket.stage] || '';
+  const stageLabel = {wc:'WILD CARD',r32:'ROUND OF 32',r16:'ROUND OF 16',qf:'QUARTER-FINALS',sf:'SEMI-FINALS',final:'FINAL',champion:'CHAMPION'}[bracket.stage] || '';
 
   const handleKickOff = async () => {
     setBusy(true); setErr('');
@@ -953,60 +1071,7 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
     setPendingMatch(null);
   };
 
-  const Slot = ({ p, won, played }) => (
-    <div style={{padding:'6px 8px',display:'flex',alignItems:'center',gap:7,opacity:played&&!won?0.28:1}}>
-      <div style={{
-        width:20,height:20,borderRadius:'50%',flexShrink:0,
-        background:won?'rgba(0,230,118,0.18)':'rgba(255,255,255,0.06)',
-        border:`1.5px solid ${won?'#00e676':'rgba(255,255,255,0.13)'}`,
-        display:'flex',alignItems:'center',justifyContent:'center',
-        fontSize:8,fontWeight:800,color:won?'#00e676':'rgba(255,255,255,0.35)',
-      }}>{p?.name?.[0]||p?.code?.[0]||'?'}</div>
-      {p?.name
-        ? <div style={{color:'#fff',fontSize:10,fontWeight:won?700:400,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div>
-        : <div style={{color:'rgba(255,255,255,0.3)',fontSize:9,fontFamily:'monospace',letterSpacing:1.5,flex:1}}>{p?.code||'TBD'}</div>
-      }
-      {won && <span style={{color:'#00e676',fontSize:10}}>✓</span>}
-    </div>
-  );
-
-  const MatchCard = ({ match }) => {
-    if (!match) return null;
-    const isActive = activeMatch?.matchId === match.id;
-    const ready = !match.played && match.p1?.name && match.p2?.name && !activeMatch;
-    return (
-      <div onClick={() => !match.played && !isActive && openMatch(match)} style={{
-        border:`1px solid ${isActive?'rgba(255,215,0,0.6)':ready?'rgba(0,230,118,0.45)':match.played?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.09)'}`,
-        borderRadius:8, overflow:'hidden',
-        background:isActive?'rgba(255,215,0,0.06)':ready?'rgba(0,230,118,0.04)':'rgba(255,255,255,0.015)',
-        cursor:match.played||isActive?'default':'pointer',
-        boxShadow:isActive?'0 0 14px rgba(255,215,0,0.15)':ready?'0 0 10px rgba(0,230,118,0.1)':'none',
-      }}>
-        <Slot p={match.p1} won={match.winner?.code===match.p1?.code} played={match.played}/>
-        <div style={{height:'0.5px',background:'rgba(255,255,255,0.06)'}}/>
-        <Slot p={match.p2} won={match.winner?.code===match.p2?.code} played={match.played}/>
-        {isActive && (
-          <div style={{padding:'3px 8px',background:'rgba(255,215,0,0.1)',borderTop:'1px solid rgba(255,215,0,0.2)',color:'#ffd700',fontSize:7.5,fontWeight:800,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center'}}>
-            ⚽ {activeMatch.p1Score} – {activeMatch.p2Score} LIVE
-          </div>
-        )}
-        {ready && !isActive && <div style={{padding:'3px 8px',background:'rgba(0,230,118,0.08)',borderTop:'1px solid rgba(0,230,118,0.12)',color:'#00e676',fontSize:7.5,fontWeight:800,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center'}}>▶ TAP TO START</div>}
-        {!match.played&&!ready&&!isActive && <div style={{padding:'3px 8px',background:'rgba(255,255,255,0.02)',borderTop:'1px solid rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.2)',fontSize:7.5,letterSpacing:1,textAlign:'center'}}>waiting for players</div>}
-      </div>
-    );
-  };
-
-  const openMatch = (match) => {
-    setErr('');
-    setPendingMatch(match);
-  };
-
-  const Round = ({ title, matches, gold=false }) => matches&&matches.length>0 ? (
-    <div style={{marginBottom:16}}>
-      <div style={{color:gold?'rgba(255,215,0,0.65)':'rgba(255,255,255,0.22)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:7,fontWeight:600}}>{title}</div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:5}}>{matches.map(m=><MatchCard key={m.id} match={m}/>)}</div>
-    </div>
-  ) : null;
+  const openMatch = (match) => { setErr(''); setPendingMatch(match); };
 
   return (
     <div style={{height:'100%',display:'flex',flexDirection:'column',background:'#080b14',fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",position:'relative',overflow:'hidden'}}>
@@ -1016,8 +1081,8 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
         <div>
           <div style={{color:'#ffd700',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',fontWeight:700}}>🏆 Tournament Bracket</div>
           <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,marginTop:2}}>
-            {myCode && <span style={{fontFamily:'monospace',color:'#00e676',marginRight:6}}>{myCode}</span>}
-            32-Player Championship
+            {myCode&&<span style={{fontFamily:'monospace',color:'#00e676',marginRight:6}}>{myCode}</span>}
+            48-Player Championship
           </div>
         </div>
         <div style={{marginLeft:'auto'}}>
@@ -1025,63 +1090,37 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
         </div>
       </div>
 
-      <div style={{flex:1,overflowY:'auto',padding:14,position:'relative',zIndex:1}}>
-        <Round title="Round of 32" matches={bracket.r32}/>
-        <Round title="Round of 16" matches={bracket.r16}/>
-        <Round title="Quarter Finals" matches={bracket.qf}/>
-        <Round title="Semi Finals" matches={bracket.sf}/>
-        {bracket.final && (
-          <div style={{marginBottom:16}}>
-            <div style={{color:'rgba(255,215,0,0.65)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:7,fontWeight:600}}>🏆 Grand Final</div>
-            <MatchCard match={bracket.final}/>
-          </div>
-        )}
-        {bracket.stage === 'champion' && bracket.champion && (
-          <div style={{padding:20,textAlign:'center',background:'rgba(255,215,0,0.08)',border:'1px solid rgba(255,215,0,0.28)',borderRadius:14}}>
-            <div style={{fontSize:36,marginBottom:8}}>🏆</div>
-            <div style={{color:'#ffd700',fontSize:16,fontWeight:900,fontFamily:'Impact,sans-serif',marginBottom:4}}>TOURNAMENT CHAMPION</div>
-            <div style={{color:'#fff',fontSize:14}}>{bracket.champion.name}</div>
-          </div>
-        )}
-      </div>
+      <BracketTree bracket={bracket} activeMatch={activeMatch} onMatchClick={openMatch}/>
 
-      {/* Start match overlay */}
-      {pendingMatch && (
+      {pendingMatch&&(
         <div style={{position:'absolute',inset:0,zIndex:40,background:'rgba(0,0,0,0.93)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
           <div style={{width:'100%',maxWidth:320,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:16,padding:24}}>
             <div style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:20,textAlign:'center'}}>
               {pendingMatch.id.replace(/_/g,' ').toUpperCase()}
             </div>
             {[
-              {slot: pendingMatch.p1, color:'#00e676', label:'Player 1'},
-              {slot: pendingMatch.p2, color:'#ff6b35', label:'Player 2'},
-            ].map(({slot, color, label}) => (
+              {slot:pendingMatch.p1,color:'#00e676',label:'Player 1'},
+              {slot:pendingMatch.p2,color:'#ff6b35',label:'Player 2'},
+            ].map(({slot,color,label})=>(
               <div key={label} style={{marginBottom:14,padding:'10px 12px',background:'rgba(255,255,255,0.04)',borderRadius:10,border:`1px solid ${slot?.name?color+'44':'rgba(255,255,255,0.08)'}`}}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <div style={{fontFamily:'monospace',fontSize:11,fontWeight:800,color,letterSpacing:2,background:`${color}15`,padding:'2px 8px',borderRadius:4}}>{slot?.code}</div>
                   <div style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:1.5,textTransform:'uppercase'}}>{label}</div>
                 </div>
                 <div style={{marginTop:6,color:slot?.name?'#fff':'rgba(255,255,255,0.3)',fontSize:13,fontWeight:slot?.name?600:400}}>
-                  {slot?.name || <span style={{fontStyle:'italic',fontSize:11}}>Not registered yet</span>}
+                  {slot?.name||<span style={{fontStyle:'italic',fontSize:11}}>Not registered yet</span>}
                 </div>
               </div>
             ))}
-            {err && <div style={{color:'#ff1744',fontSize:11,marginBottom:10,textAlign:'center'}}>{err}</div>}
+            {err&&<div style={{color:'#ff1744',fontSize:11,marginBottom:10,textAlign:'center'}}>{err}</div>}
             <div style={{display:'flex',gap:10}}>
-              <button onClick={() => { setPendingMatch(null); setErr(''); }} className="sec-btn" style={{flex:1,padding:'11px'}}>Cancel</button>
-              <button
-                onClick={handleKickOff}
-                disabled={busy || !pendingMatch.p1?.name || !pendingMatch.p2?.name}
-                className="prim-btn"
-                style={{flex:2,padding:'11px'}}
-              >
-                {busy ? '…' : '⚽ Kick Off'}
+              <button onClick={()=>{setPendingMatch(null);setErr('');}} className="sec-btn" style={{flex:1,padding:'11px'}}>Cancel</button>
+              <button onClick={handleKickOff} disabled={busy||!pendingMatch.p1?.name||!pendingMatch.p2?.name} className="prim-btn" style={{flex:2,padding:'11px'}}>
+                {busy?'…':'⚽ Kick Off'}
               </button>
             </div>
-            {(!pendingMatch.p1?.name || !pendingMatch.p2?.name) && (
-              <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,textAlign:'center',marginTop:10}}>
-                Both players need to register first
-              </div>
+            {(!pendingMatch.p1?.name||!pendingMatch.p2?.name)&&(
+              <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,textAlign:'center',marginTop:10}}>Both players need to register first</div>
             )}
           </div>
         </div>
