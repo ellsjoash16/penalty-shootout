@@ -393,13 +393,17 @@ function LoginScreen({ serverState, onJoined }) {
     const n = name.trim();
     if (!n) { setErr('Enter your name'); return; }
     setBusy(true); setErr('');
-    const endpoint = noTournament ? '/api/tournament/create' : '/api/join';
-    const res = await api(endpoint, { name: n });
+    try {
+      const endpoint = noTournament ? '/api/tournament/create' : '/api/join';
+      const res = await api(endpoint, { name: n });
+      if (res.error) { setErr(res.error); setBusy(false); return; }
+      localStorage.setItem('psc_code', res.code);
+      localStorage.setItem('psc_name', n);
+      setMyCode(res.code);
+    } catch {
+      setErr('Could not connect — check you\'re on the right URL and try again');
+    }
     setBusy(false);
-    if (res.error) { setErr(res.error); return; }
-    localStorage.setItem('psc_code', res.code);
-    localStorage.setItem('psc_name', n);
-    setMyCode(res.code);
   };
 
   // Code splash — shown after getting assigned
