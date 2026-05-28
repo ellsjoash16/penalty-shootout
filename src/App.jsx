@@ -20,11 +20,15 @@ const CHOOSE_TIME = 9; // seconds shown on client countdown
 
 const rz = () => ZONES[Math.floor(Math.random() * ZONES.length)];
 
-const api = (path, body) => fetch(path, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-}).then(r => r.json());
+const api = async (path, body) => {
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { return { error: `Server error ${r.status} — try again` }; }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // GLOBAL STYLES
@@ -400,8 +404,8 @@ function LoginScreen({ serverState, onJoined }) {
       localStorage.setItem('psc_code', res.code);
       localStorage.setItem('psc_name', n);
       setMyCode(res.code);
-    } catch {
-      setErr('Could not connect — check you\'re on the right URL and try again');
+    } catch (e) {
+      setErr('Network error — check your connection and try again');
     }
     setBusy(false);
   };
