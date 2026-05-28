@@ -382,156 +382,88 @@ function GoalVisual({ phase, shotZone, saveZone, isGoal }) {
 // ═══════════════════════════════════════════════════════════════
 
 function LoginScreen({ serverState, onJoined }) {
-  const [view, setView] = useState('join'); // 'join' | 'create'
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [err, setErr] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [name, setName]       = useState('');
+  const [err, setErr]         = useState('');
+  const [busy, setBusy]       = useState(false);
+  const [myCode, setMyCode]   = useState(null); // show code splash after joining
 
   const noTournament = !serverState?.bracket;
 
-  const handleJoin = async () => {
-    const c = code.trim().toUpperCase();
-    const n = name.trim();
-    if (!c || c.length !== 4) { setErr('Enter your 4-letter code'); return; }
-    if (!n) { setErr('Enter your name'); return; }
-    setBusy(true); setErr('');
-    const res = await api('/api/register', { code: c, name: n });
-    setBusy(false);
-    if (res.error) { setErr(res.error); return; }
-    localStorage.setItem('psc_code', c);
-    localStorage.setItem('psc_name', n);
-    onJoined(c, n);
-  };
-
-  const handleCreate = async () => {
+  const handleSubmit = async () => {
     const n = name.trim();
     if (!n) { setErr('Enter your name'); return; }
     setBusy(true); setErr('');
-    const res = await api('/api/tournament/create', { name: n });
+    const endpoint = noTournament ? '/api/tournament/create' : '/api/join';
+    const res = await api(endpoint, { name: n });
     setBusy(false);
     if (res.error) { setErr(res.error); return; }
-    const myCode = res.code;
-    localStorage.setItem('psc_code', myCode);
+    localStorage.setItem('psc_code', res.code);
     localStorage.setItem('psc_name', n);
-    onJoined(myCode, n);
+    setMyCode(res.code);
   };
 
-  return (
-    <div style={{
-      minHeight:'100%', display:'flex', flexDirection:'column',
-      alignItems:'center', justifyContent:'center',
-      padding:'40px 20px', background:'#080b14',
-      fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",
-      position:'relative', overflow:'hidden',
-    }}>
+  // Code splash — shown after getting assigned
+  if (myCode) return (
+    <div style={{minHeight:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 20px',background:'#080b14',fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",position:'relative',overflow:'hidden'}}>
       <style>{CSS}</style>
       <StadiumBg/>
+      <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:340,textAlign:'center'}}>
+        <div style={{fontSize:40,marginBottom:16}}>🎟️</div>
+        <div style={{color:'rgba(255,255,255,0.4)',fontSize:10,letterSpacing:3,textTransform:'uppercase',marginBottom:8}}>You're in! Your code is</div>
+        <div style={{
+          fontSize:56, fontWeight:900, fontFamily:'monospace', letterSpacing:10,
+          color:'#00e676', textShadow:'0 0 40px rgba(0,230,118,0.5)',
+          marginBottom:6, animation:'scaleIn 0.4s ease',
+        }}>{myCode}</div>
+        <div style={{color:'rgba(255,255,255,0.25)',fontSize:11,marginBottom:32}}>
+          Remember this — you'll need it to log back in from another device
+        </div>
+        <button onClick={()=>onJoined(myCode, name.trim())} className="prim-btn" style={{width:'100%',padding:'15px',fontSize:14}}>
+          Let's Go →
+        </button>
+      </div>
+    </div>
+  );
 
-      <div style={{ position:'relative', zIndex:1, width:'100%', maxWidth:380, textAlign:'center' }}>
+  return (
+    <div style={{minHeight:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 20px',background:'#080b14',fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",position:'relative',overflow:'hidden'}}>
+      <style>{CSS}</style>
+      <StadiumBg/>
+      <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:380,textAlign:'center'}}>
         <div style={{fontSize:56,animation:'floatBob 3s ease-in-out infinite',marginBottom:20}}>⚽</div>
-
-        <h1 style={{
-          color:'#fff', fontSize:32, fontWeight:900,
-          fontFamily:'Impact,"Arial Narrow Bold",sans-serif',
-          letterSpacing:2, textTransform:'uppercase', marginBottom:4,
-          textShadow:'0 0 40px rgba(0,230,118,0.25)',
-        }}>
+        <h1 style={{color:'#fff',fontSize:32,fontWeight:900,fontFamily:'Impact,"Arial Narrow Bold",sans-serif',letterSpacing:2,textTransform:'uppercase',marginBottom:4,textShadow:'0 0 40px rgba(0,230,118,0.25)'}}>
           PENALTY <span style={{color:'#00e676'}}>SHOWDOWN</span>
         </h1>
         <div style={{color:'rgba(255,255,255,0.3)',fontSize:11,letterSpacing:4,textTransform:'uppercase',marginBottom:32}}>
           Office Championship 2025
         </div>
-
-        <div style={{
-          background:'rgba(255,255,255,0.03)',
-          border:'1px solid rgba(255,255,255,0.09)',
-          borderRadius:18, padding:28,
-        }}>
-          {noTournament ? (
-            <>
-              <div style={{color:'rgba(255,255,255,0.5)',fontSize:12,marginBottom:20}}>
-                No tournament running yet. Create one to get started.
-              </div>
-              <div style={{marginBottom:18, textAlign:'left'}}>
-                <label style={{display:'block',color:'rgba(255,255,255,0.45)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>
-                  Your Name
-                </label>
-                <input
-                  value={name} onChange={e=>setName(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&handleCreate()}
-                  placeholder="Enter your name..."
-                  autoFocus
-                  style={{
-                    width:'100%', padding:'11px 15px',
-                    background:'rgba(255,255,255,0.06)',
-                    border:'1px solid rgba(255,255,255,0.12)',
-                    borderRadius:10, color:'#fff', fontSize:14,
-                    outline:'none',
-                  }}
-                  onFocus={e=>e.target.style.borderColor='#00e676'}
-                  onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.12)'}
-                />
-              </div>
-              {err && <div style={{color:'#ff1744',fontSize:11,marginBottom:10}}>{err}</div>}
-              <button onClick={handleCreate} disabled={busy} className="prim-btn" style={{width:'100%',padding:'14px',fontSize:13}}>
-                🏟️ Create Tournament
-              </button>
-            </>
-          ) : (
-            <>
-              <div style={{marginBottom:16, textAlign:'left'}}>
-                <label style={{display:'block',color:'rgba(255,255,255,0.45)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>
-                  Your Code
-                </label>
-                <input
-                  value={code} onChange={e=>setCode(e.target.value.toUpperCase().slice(0,4))}
-                  onKeyDown={e=>e.key==='Enter'&&handleJoin()}
-                  placeholder="e.g. XK7M"
-                  autoFocus
-                  style={{
-                    width:'100%', padding:'11px 15px',
-                    background:'rgba(255,255,255,0.06)',
-                    border:'1px solid rgba(255,255,255,0.12)',
-                    borderRadius:10, color:'#fff', fontSize:16,
-                    outline:'none', fontFamily:'monospace', letterSpacing:4,
-                    textTransform:'uppercase',
-                  }}
-                  onFocus={e=>e.target.style.borderColor='#00e676'}
-                  onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.12)'}
-                />
-              </div>
-              <div style={{marginBottom:18, textAlign:'left'}}>
-                <label style={{display:'block',color:'rgba(255,255,255,0.45)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>
-                  Your Name
-                </label>
-                <input
-                  value={name} onChange={e=>setName(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&handleJoin()}
-                  placeholder="Enter your name..."
-                  style={{
-                    width:'100%', padding:'11px 15px',
-                    background:'rgba(255,255,255,0.06)',
-                    border:'1px solid rgba(255,255,255,0.12)',
-                    borderRadius:10, color:'#fff', fontSize:14,
-                    outline:'none',
-                  }}
-                  onFocus={e=>e.target.style.borderColor='#00e676'}
-                  onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.12)'}
-                />
-              </div>
-              {err && <div style={{color:'#ff1744',fontSize:11,marginBottom:10}}>{err}</div>}
-              <button onClick={handleJoin} disabled={busy} className="prim-btn" style={{width:'100%',padding:'14px',fontSize:13}}>
-                ⚽ Join Tournament
-              </button>
-            </>
+        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:18,padding:28}}>
+          {noTournament && (
+            <div style={{color:'rgba(255,255,255,0.35)',fontSize:11,marginBottom:20,lineHeight:1.5}}>
+              No tournament running yet — enter your name to create one
+            </div>
           )}
+          <div style={{marginBottom:18,textAlign:'left'}}>
+            <label style={{display:'block',color:'rgba(255,255,255,0.45)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>
+              Your Name
+            </label>
+            <input
+              value={name} onChange={e=>setName(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&handleSubmit()}
+              placeholder="Enter your name..."
+              autoFocus
+              style={{width:'100%',padding:'13px 15px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:10,color:'#fff',fontSize:15,outline:'none'}}
+              onFocus={e=>e.target.style.borderColor='#00e676'}
+              onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.12)'}
+            />
+          </div>
+          {err && <div style={{color:'#ff1744',fontSize:11,marginBottom:10}}>{err}</div>}
+          <button onClick={handleSubmit} disabled={busy} className="prim-btn" style={{width:'100%',padding:'14px',fontSize:13}}>
+            {busy ? '…' : noTournament ? '🏟️ Create Tournament' : '⚽ Join Tournament'}
+          </button>
         </div>
-
         <div style={{color:'rgba(255,255,255,0.18)',fontSize:10,marginTop:20,letterSpacing:1}}>
-          {noTournament
-            ? 'You\'ll get a code to share with other players'
-            : 'Ask the organiser for your 4-letter code'}
+          {noTournament ? '48 slots · you\'ll be assigned a bracket code' : 'You\'ll be assigned a random slot in the bracket'}
         </div>
       </div>
     </div>

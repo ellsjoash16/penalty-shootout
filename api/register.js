@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   let found = false;
   const upd = s => { if (s?.code === code) { s.name = name.trim(); found = true; } };
   const updM = m => m && (upd(m.p1), upd(m.p2));
-  [b.r32, b.r16, b.qf, b.sf].forEach(arr => arr.forEach(updM));
+  [b.wc, b.r32, b.r16, b.qf, b.sf].forEach(arr => arr.forEach(updM));
   if (b.final) updM(b.final);
 
   if (!found) return res.status(404).json({ error: 'code not found — check with the organiser' });
