@@ -51,8 +51,8 @@ const CSS = `
     100% { transform: translateY(105vh) rotate(900deg); opacity: 0; }
   }
   @keyframes pulseGreen {
-    0%,100% { box-shadow: 0 0 0 0 rgba(0,230,118,0); }
-    50% { box-shadow: 0 0 30px 8px rgba(0,230,118,0.25); }
+    0%,100% { box-shadow: 0 0 0 0 rgba(201,162,39,0); }
+    50% { box-shadow: 0 0 30px 8px rgba(201,162,39,0.4); }
   }
   @keyframes scaleIn {
     0% { transform: scale(0.8); opacity: 0; }
@@ -63,9 +63,9 @@ const CSS = `
     50% { color: #ff0000; transform: scale(1.15); }
   }
   @keyframes goalFlashBg {
-    0% { background: rgba(0,230,118,0); }
-    15% { background: rgba(0,230,118,0.12); }
-    100% { background: rgba(0,230,118,0); }
+    0% { background: rgba(201,162,39,0); }
+    15% { background: rgba(201,162,39,0.18); }
+    100% { background: rgba(201,162,39,0); }
   }
   @keyframes savedFlashBg {
     0% { background: rgba(255,23,68,0); }
@@ -108,17 +108,17 @@ const CSS = `
     gap: 2px;
   }
   .zone-btn:hover:not(:disabled) {
-    border-color: rgba(0,230,118,0.7);
-    background: rgba(0,230,118,0.1);
-    color: #00e676;
+    border-color: rgba(201,162,39,0.7);
+    background: rgba(201,162,39,0.1);
+    color: #C9A227;
     transform: scale(1.04);
-    box-shadow: 0 0 16px rgba(0,230,118,0.2);
+    box-shadow: 0 0 16px rgba(201,162,39,0.25);
   }
   .zone-btn.selected {
-    border-color: #00e676;
-    background: rgba(0,230,118,0.18);
-    color: #00e676;
-    box-shadow: 0 0 22px rgba(0,230,118,0.35);
+    border-color: #C9A227;
+    background: rgba(201,162,39,0.18);
+    color: #C9A227;
+    box-shadow: 0 0 22px rgba(201,162,39,0.5);
     animation: pulseGreen 1.5s ease infinite;
   }
   .zone-btn:disabled { cursor: default; pointer-events: none; }
@@ -129,8 +129,8 @@ const CSS = `
     box-shadow: 0 0 16px rgba(255,107,53,0.25);
   }
   .zone-btn.reveal-shot-goal {
-    border-color: #00e676 !important; background: rgba(0,230,118,0.2) !important;
-    color: #00e676 !important;
+    border-color: #C9A227 !important; background: rgba(201,162,39,0.22) !important;
+    color: #C9A227 !important;
   }
   .zone-btn.reveal-shot-saved {
     border-color: #ff1744 !important; background: rgba(255,23,68,0.2) !important;
@@ -141,13 +141,13 @@ const CSS = `
   }
   .zone-btn.reveal-none { opacity: 0.2; }
   .prim-btn {
-    background: linear-gradient(135deg,#00e676,#00bf62);
+    background: linear-gradient(135deg,#C9A227,#A07D1C);
     color: #000; border: none; border-radius: 12px;
     font-weight: 800; font-size: 14px; letter-spacing: 1px;
     text-transform: uppercase; cursor: pointer; transition: all 0.2s;
     display:flex; align-items:center; justify-content:center; gap:8px;
   }
-  .prim-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,230,118,0.4); }
+  .prim-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(201,162,39,0.45); }
   .prim-btn:active { transform: translateY(0); }
   .prim-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
   .sec-btn {
@@ -488,7 +488,7 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
       <div className="relative z-10 w-full max-w-xs text-center">
         <div className="text-4xl mb-4">🎟️</div>
         <p className="text-xs tracking-widest uppercase text-muted-foreground mb-2">You're in! Your code is</p>
-        <div className="text-6xl font-black font-mono tracking-[0.3em] text-primary mb-2" style={{textShadow:'0 0 40px rgba(0,230,118,0.5)',animation:'scaleIn 0.4s ease'}}>
+        <div className="text-6xl font-black font-mono tracking-[0.3em] text-primary mb-2" style={{textShadow:'0 0 40px rgba(201,162,39,0.6)',animation:'scaleIn 0.4s ease'}}>
           {myCode}
         </div>
         <p className="text-xs text-muted-foreground mb-8">Remember this — you'll need it to log back in from another device</p>
@@ -696,8 +696,8 @@ function RealtimeMatchScreen({ am, myCode }) {
               <div key={i} style={{ display:'flex', flexDirection:'column', gap:2, alignItems:'center' }}>
                 <div style={{
                   width:10, height:10, borderRadius:'50%',
-                  background: !pk ? 'rgba(255,255,255,0.08)' : pk.isGoal ? '#00e676' : 'rgba(255,255,255,0.25)',
-                  border:`1px solid ${!pk ? 'rgba(255,255,255,0.15)' : pk.isGoal ? '#00e676' : 'rgba(255,255,255,0.4)'}`,
+                  background: !pk ? 'rgba(255,255,255,0.08)' : pk.isGoal ? '#C9A227' : 'rgba(255,255,255,0.25)',
+                  border:`1px solid ${!pk ? 'rgba(255,255,255,0.15)' : pk.isGoal ? '#C9A227' : 'rgba(255,255,255,0.4)'}`,
                   transition:'all 0.3s',
                 }}/>
                 <div style={{
@@ -733,9 +733,9 @@ function RealtimeMatchScreen({ am, myCode }) {
               fontSize:58, fontWeight:900,
               fontFamily:'Impact,"Arial Narrow Bold",sans-serif',
               letterSpacing:1, textTransform:'uppercase',
-              color: isGoal ? '#00e676' : '#ff1744',
+              color: isGoal ? '#C9A227' : '#ff1744',
               textShadow: isGoal
-                ? '0 0 60px rgba(0,230,118,0.9),0 0 120px rgba(0,230,118,0.4)'
+                ? '0 0 60px rgba(201,162,39,0.95),0 0 120px rgba(201,162,39,0.5)'
                 : '0 0 60px rgba(255,23,68,0.9)',
               animation:'stampIn 0.42s cubic-bezier(0.2,0,0.2,1) forwards',
             }}>
@@ -800,13 +800,13 @@ function RealtimeMatchScreen({ am, myCode }) {
           <div style={{
             display:'flex', alignItems:'center', gap:8,
             background: iAmShooter ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.55)',
-            border: `1px solid ${iAmShooter ? 'rgba(0,230,118,0.5)' : 'rgba(64,196,255,0.5)'}`,
+            border: `1px solid ${iAmShooter ? 'rgba(201,162,39,0.6)' : 'rgba(64,196,255,0.5)'}`,
             borderRadius:20, padding:'6px 16px',
             backdropFilter:'blur(8px)',
           }}>
             <span style={{fontSize:14}}>{iAmShooter ? '⚽' : '🧤'}</span>
             <span style={{
-              color: iAmShooter ? '#00e676' : '#40c4ff',
+              color: iAmShooter ? '#C9A227' : '#40c4ff',
               fontSize:10, fontWeight:800, letterSpacing:2.5, textTransform:'uppercase',
             }}>
               {me.name.split(' ')[0]} — {iAmShooter ? 'SHOOT' : 'SAVE'}
@@ -892,7 +892,7 @@ function SpectatorMatchView({ am }) {
             const pk = p1Kicks[i]; const ak = p2Kicks[i];
             return (
               <div key={i} style={{ display:'flex', flexDirection:'column', gap:2, alignItems:'center' }}>
-                <div style={{ width:10,height:10,borderRadius:'50%', background:!pk?'rgba(255,255,255,0.08)':pk.isGoal?'#00e676':'rgba(255,255,255,0.25)', border:`1px solid ${!pk?'rgba(255,255,255,0.15)':pk.isGoal?'#00e676':'rgba(255,255,255,0.4)'}`, transition:'all 0.3s' }}/>
+                <div style={{ width:10,height:10,borderRadius:'50%', background:!pk?'rgba(255,255,255,0.08)':pk.isGoal?'#C9A227':'rgba(255,255,255,0.25)', border:`1px solid ${!pk?'rgba(255,255,255,0.15)':pk.isGoal?'#C9A227':'rgba(255,255,255,0.4)'}`, transition:'all 0.3s' }}/>
                 <div style={{ width:10,height:10,borderRadius:'50%', background:!ak?'rgba(255,255,255,0.08)':ak.isGoal?'#ff1744':'rgba(255,255,255,0.25)', border:`1px solid ${!ak?'rgba(255,255,255,0.15)':ak.isGoal?'#ff1744':'rgba(255,255,255,0.4)'}`, transition:'all 0.3s' }}/>
               </div>
             );
@@ -913,8 +913,8 @@ function SpectatorMatchView({ am }) {
               position:'absolute', left:'50%', top:'42%',
               fontSize:58, fontWeight:900,
               fontFamily:'Impact,sans-serif', letterSpacing:1, textTransform:'uppercase',
-              color: kr?.isGoal ? '#00e676' : '#ff1744',
-              textShadow: kr?.isGoal ? '0 0 60px rgba(0,230,118,0.9)' : '0 0 60px rgba(255,23,68,0.9)',
+              color: kr?.isGoal ? '#C9A227' : '#ff1744',
+              textShadow: kr?.isGoal ? '0 0 60px rgba(201,162,39,0.95)' : '0 0 60px rgba(255,23,68,0.9)',
               animation:'stampIn 0.42s cubic-bezier(0.2,0,0.2,1) forwards',
             }}>{kr?.isGoal ? 'GOAL!' : 'SAVED!'}</div>
           </div>
@@ -954,7 +954,7 @@ function BracketTree({ bracket, activeMatch, onMatchClick }) {
   const cy = (col, idx) => rawTop(col, idx) + MH / 2;
 
   const LC = 'rgba(255,255,255,0.1)';
-  const WL = 'rgba(0,230,118,0.22)';
+  const WL = 'rgba(201,162,39,0.28)';
   const lines = [];
 
   // WC → R32: dashed green arrows
@@ -988,7 +988,7 @@ function BracketTree({ bracket, activeMatch, onMatchClick }) {
 
   const TSlot = ({p, won, played, isWCSlot}) => (
     <div style={{flex:1,display:'flex',alignItems:'center',gap:5,padding:'0 6px',opacity:played&&!won?0.3:1}}>
-      <div style={{width:14,height:14,borderRadius:'50%',flexShrink:0,background:won?'rgba(0,230,118,0.2)':'rgba(255,255,255,0.06)',border:`1px solid ${won?'#00e676':'rgba(255,255,255,0.1)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:6,fontWeight:900,color:won?'#00e676':'rgba(255,255,255,0.3)'}}>
+      <div style={{width:14,height:14,borderRadius:'50%',flexShrink:0,background:won?'rgba(201,162,39,0.2)':'rgba(255,255,255,0.06)',border:`1px solid ${won?'#C9A227':'rgba(255,255,255,0.1)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:6,fontWeight:900,color:won?'#C9A227':'rgba(255,255,255,0.3)'}}>
         {p?.name?.[0]||p?.code?.[0]||'?'}
       </div>
       <div style={{flex:1,overflow:'hidden',lineHeight:1}}>
@@ -999,7 +999,7 @@ function BracketTree({ bracket, activeMatch, onMatchClick }) {
             : <div style={{color:'rgba(255,255,255,0.15)',fontSize:8,fontStyle:'italic'}}>{isWCSlot?'WC winner':'TBD'}</div>
         }
       </div>
-      {won&&<span style={{color:'#00e676',fontSize:8}}>✓</span>}
+      {won&&<span style={{color:'#C9A227',fontSize:8}}>✓</span>}
     </div>
   );
 
@@ -1027,20 +1027,20 @@ function BracketTree({ bracket, activeMatch, onMatchClick }) {
           if (isPH)       { bc='rgba(255,255,255,0.04)'; bg='transparent'; }
           else if (isActive)  { bc='rgba(255,215,0,0.65)';  bg='rgba(255,215,0,0.05)'; }
           else if (m.played)  { bc='rgba(255,255,255,0.05)'; bg='rgba(255,255,255,0.01)'; }
-          else if (canPlay)   { bc='rgba(0,230,118,0.55)';   bg='rgba(0,230,118,0.05)'; }
+          else if (canPlay)   { bc='rgba(201,162,39,0.6)';    bg='rgba(201,162,39,0.05)'; }
           return (
             <div key={m.id} onClick={()=>canPlay&&onMatchClick(m)} style={{
               position:'absolute',left:PX+colX(col),top:HEADER_H+rawTop(col,idx),
               width:MW,height:MH,border:`1px solid ${bc}`,borderRadius:6,background:bg,
               cursor:canPlay?'pointer':'default',display:'flex',flexDirection:'column',
               overflow:'hidden',boxSizing:'border-box',
-              boxShadow:isActive?'0 0 12px rgba(255,215,0,0.15)':canPlay?'0 0 8px rgba(0,230,118,0.1)':'none',
+              boxShadow:isActive?'0 0 12px rgba(255,215,0,0.15)':canPlay?'0 0 8px rgba(201,162,39,0.15)':'none',
             }}>
               {isPH ? <PHSlot/> : <TSlot p={m.p1} won={m.winner?.code===m.p1?.code} played={m.played} isWCSlot={false}/>}
               <div style={{height:1,background:'rgba(255,255,255,0.05)'}}/>
               {isPH ? <PHSlot/> : <TSlot p={m.p2} won={m.winner?.code===m.p2?.code} played={m.played} isWCSlot={col===1&&!m.p2}/>}
               {isActive&&<div style={{position:'absolute',inset:'auto 0 0',height:9,background:'rgba(255,215,0,0.15)',display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{color:'#ffd700',fontSize:6,fontWeight:800,letterSpacing:1.5}}>LIVE {activeMatch.p1Score}–{activeMatch.p2Score}</span></div>}
-              {canPlay&&<div style={{position:'absolute',inset:'auto 0 0',height:8,background:'rgba(0,230,118,0.12)',display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{color:'#00e676',fontSize:5.5,fontWeight:800,letterSpacing:1.5}}>▶ PLAY</span></div>}
+              {canPlay&&<div style={{position:'absolute',inset:'auto 0 0',height:8,background:'rgba(201,162,39,0.15)',display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{color:'#C9A227',fontSize:5.5,fontWeight:800,letterSpacing:1.5}}>▶ PLAY</span></div>}
             </div>
           );
         }))}
@@ -1164,7 +1164,7 @@ function CPUMatchScreen({ playerName, roundLabel, onDone }) {
             const pk=playerShotKicks[i]; const ck=cpuShotKicks[i];
             return (
               <div key={i} style={{display:'flex',flexDirection:'column',gap:2,alignItems:'center'}}>
-                <div style={{width:10,height:10,borderRadius:'50%',background:!pk?'rgba(255,255,255,0.08)':pk.isGoal?'#00e676':'rgba(255,255,255,0.25)',border:`1px solid ${!pk?'rgba(255,255,255,0.15)':pk.isGoal?'#00e676':'rgba(255,255,255,0.4)'}`,transition:'all 0.3s'}}/>
+                <div style={{width:10,height:10,borderRadius:'50%',background:!pk?'rgba(255,255,255,0.08)':pk.isGoal?'#C9A227':'rgba(255,255,255,0.25)',border:`1px solid ${!pk?'rgba(255,255,255,0.15)':pk.isGoal?'#C9A227':'rgba(255,255,255,0.4)'}`,transition:'all 0.3s'}}/>
                 <div style={{width:10,height:10,borderRadius:'50%',background:!ck?'rgba(255,255,255,0.08)':ck.isGoal?'#ff1744':'rgba(255,255,255,0.25)',border:`1px solid ${!ck?'rgba(255,255,255,0.15)':ck.isGoal?'#ff1744':'rgba(255,255,255,0.4)'}`,transition:'all 0.3s'}}/>
               </div>
             );
@@ -1185,7 +1185,7 @@ function CPUMatchScreen({ playerName, roundLabel, onDone }) {
 
         {showReveal && (
           <div style={{position:'absolute',inset:0,zIndex:20,pointerEvents:'none'}}>
-            <div style={{position:'absolute',left:'50%',top:'42%',fontSize:58,fontWeight:900,fontFamily:'Impact,"Arial Narrow Bold",sans-serif',letterSpacing:1,textTransform:'uppercase',color:isGoalNow?'#00e676':'#ff1744',textShadow:isGoalNow?'0 0 60px rgba(0,230,118,0.9),0 0 120px rgba(0,230,118,0.4)':'0 0 60px rgba(255,23,68,0.9)',animation:'stampIn 0.42s cubic-bezier(0.2,0,0.2,1) forwards'}}>
+            <div style={{position:'absolute',left:'50%',top:'42%',fontSize:58,fontWeight:900,fontFamily:'Impact,"Arial Narrow Bold",sans-serif',letterSpacing:1,textTransform:'uppercase',color:isGoalNow?'#C9A227':'#ff1744',textShadow:isGoalNow?'0 0 60px rgba(201,162,39,0.95),0 0 120px rgba(201,162,39,0.5)':'0 0 60px rgba(255,23,68,0.9)',animation:'stampIn 0.42s cubic-bezier(0.2,0,0.2,1) forwards'}}>
               {isGoalNow ? 'GOAL!' : 'SAVED!'}
             </div>
             <div style={{position:'absolute',left:'50%',top:'62%',transform:'translateX(-50%)',color:'rgba(255,255,255,0.65)',fontSize:12,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center',animation:'fadeSlideUp 0.5s 0.25s ease both'}}>
@@ -1206,9 +1206,9 @@ function CPUMatchScreen({ playerName, roundLabel, onDone }) {
 
         {/* Role pill + hint pinned to bottom */}
         <div style={{position:'absolute',bottom:16,left:0,right:0,zIndex:15,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.55)',border:`1px solid ${iAmShooter?'rgba(0,230,118,0.5)':'rgba(64,196,255,0.5)'}`,borderRadius:20,padding:'6px 16px',backdropFilter:'blur(8px)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.55)',border:`1px solid ${iAmShooter?'rgba(201,162,39,0.6)':'rgba(64,196,255,0.5)'}`,borderRadius:20,padding:'6px 16px',backdropFilter:'blur(8px)'}}>
             <span style={{fontSize:14}}>{iAmShooter ? '⚽' : '🧤'}</span>
-            <span style={{color:iAmShooter?'#00e676':'#40c4ff',fontSize:10,fontWeight:800,letterSpacing:2.5,textTransform:'uppercase'}}>
+            <span style={{color:iAmShooter?'#C9A227':'#40c4ff',fontSize:10,fontWeight:800,letterSpacing:2.5,textTransform:'uppercase'}}>
               {playerName.split(' ')[0]} — {iAmShooter ? 'SHOOT' : 'SAVE'}
             </span>
             {sd && <span style={{color:'#ffd700',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>⚡SD</span>}
@@ -1306,19 +1306,19 @@ function CPUBracketScreen({ playerName, onExit }) {
             const res = results[i];
             return (
               <div key={i} className="flex items-center gap-3 rounded-xl px-4 py-3 transition-all" style={{
-                background: isNext ? 'rgba(0,230,118,0.07)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${isNext ? 'rgba(0,230,118,0.3)' : res ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.05)'}`,
+                background: isNext ? 'rgba(201,162,39,0.07)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isNext ? 'rgba(201,162,39,0.35)' : res ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.05)'}`,
                 opacity: !res && !isNext ? 0.35 : 1,
               }}>
                 <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-black" style={{
-                  background: res==='win'?'rgba(0,230,118,0.15)':res==='loss'?'rgba(255,23,68,0.15)':isNext?'rgba(0,230,118,0.1)':'rgba(255,255,255,0.04)',
-                  border:`1.5px solid ${res==='win'?'#00e676':res==='loss'?'#ff1744':isNext?'rgba(0,230,118,0.4)':'rgba(255,255,255,0.1)'}`,
-                  color: res==='win'?'#00e676':res==='loss'?'#ff1744':isNext?'#00e676':'rgba(255,255,255,0.4)',
+                  background: res==='win'?'rgba(201,162,39,0.15)':res==='loss'?'rgba(255,23,68,0.15)':isNext?'rgba(201,162,39,0.1)':'rgba(255,255,255,0.04)',
+                  border:`1.5px solid ${res==='win'?'#C9A227':res==='loss'?'#ff1744':isNext?'rgba(201,162,39,0.45)':'rgba(255,255,255,0.1)'}`,
+                  color: res==='win'?'#C9A227':res==='loss'?'#ff1744':isNext?'#C9A227':'rgba(255,255,255,0.4)',
                 }}>
                   {res === 'win' ? '✓' : res === 'loss' ? '✗' : isNext ? '▶' : `${i+1}`}
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-bold" style={{color:isNext?'#00e676':res==='win'?'#00e676':res==='loss'?'#ff4444':'rgba(255,255,255,0.5)'}}>{label}</div>
+                  <div className="text-sm font-bold" style={{color:isNext?'#C9A227':res==='win'?'#C9A227':res==='loss'?'#ff4444':'rgba(255,255,255,0.5)'}}>{label}</div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">
                     {res === 'win' ? 'Won ✓' : res === 'loss' ? 'Lost ✗' : isNext ? 'Up next' : 'Locked'}
                   </div>
@@ -1381,7 +1381,7 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
                 {pendingMatch.id.replace(/_/g,' ').toUpperCase()}
               </p>
               {[
-                {slot:pendingMatch.p1, color:'#00e676', label:'Player 1'},
+                {slot:pendingMatch.p1, color:'#C9A227', label:'Player 1'},
                 {slot:pendingMatch.p2, color:'#ff6b35', label:'Player 2'},
               ].map(({slot,color,label}) => (
                 <div key={label} className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${slot?.name ? color+'44' : 'rgba(255,255,255,0.08)'}`}}>
