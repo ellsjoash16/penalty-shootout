@@ -165,6 +165,30 @@ const CSS = `
 function StadiumBg({ pulse }) {
   return (
     <div style={{
+      position:'absolute', inset:0, zIndex:0, overflow:'hidden',
+      background:'linear-gradient(180deg,#050810 0%,#070c17 55%,#060a12 100%)',
+      animation: pulse ? 'goalFlashBg 0.8s ease' : 'none',
+    }}>
+      <div style={{
+        position:'absolute', top:'-10%', left:'50%', transform:'translateX(-50%)',
+        width:700, height:400,
+        background:'radial-gradient(ellipse, rgba(0,35,5,0.5) 0%, transparent 65%)',
+        pointerEvents:'none',
+      }}/>
+      <div style={{
+        position:'absolute', top:0, left:0, right:0, height:'40%',
+        backgroundImage:'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.035) 1px, transparent 0)',
+        backgroundSize:'22px 14px',
+        maskImage:'linear-gradient(180deg,rgba(0,0,0,0.8) 0%,transparent 100%)',
+        WebkitMaskImage:'linear-gradient(180deg,rgba(0,0,0,0.8) 0%,transparent 100%)',
+      }}/>
+    </div>
+  );
+}
+
+function PitchBg({ pulse }) {
+  return (
+    <div style={{
       position:'absolute', inset:0, zIndex:0,
       backgroundImage:'url(/stadium.png)',
       backgroundSize:'cover',
@@ -553,7 +577,7 @@ function RealtimeMatchScreen({ am, myCode }) {
       background:'#080b14', fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",
       position:'relative', overflow:'hidden',
     }}>
-      <StadiumBg pulse={showReveal && isGoal}/>
+      <PitchBg pulse={showReveal && isGoal}/>
 
       {/* Score bar */}
       <div style={{
@@ -796,7 +820,7 @@ function SpectatorMatchView({ am }) {
       background:'#080b14', fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",
       position:'relative', overflow:'hidden',
     }}>
-      <StadiumBg pulse={localPhase === 'result' && kr?.isGoal}/>
+      <PitchBg pulse={localPhase === 'result' && kr?.isGoal}/>
 
       {/* Score bar */}
       <div style={{
