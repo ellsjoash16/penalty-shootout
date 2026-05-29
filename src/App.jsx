@@ -411,8 +411,8 @@ function PenaltyOverlay({ phase, shotZone, saveZone, isGoal, picking, myZone, on
                     {ZONE_ICONS[z]}
                   </span>
                 )}
-                {showReveal && isShot && isGoal  && <span style={{fontSize:16}}>⚽</span>}
-                {showReveal && isShot && !isGoal && isSave && <span style={{fontSize:16}}>🧤</span>}
+                {showReveal && isShot && isGoal  && <span style={{fontSize:11,fontWeight:900,letterSpacing:1}}>GOAL</span>}
+                {showReveal && isShot && !isGoal && isSave && <span style={{fontSize:11,fontWeight:900,letterSpacing:1}}>SAVED</span>}
               </button>
             );
           })}
@@ -433,7 +433,7 @@ function PenaltyOverlay({ phase, shotZone, saveZone, isGoal, picking, myZone, on
           border:'2.5px solid rgba(255,255,255,0.9)',
           display:'flex', alignItems:'center', justifyContent:'center',
           fontSize:14, boxShadow:'0 2px 14px rgba(0,0,0,0.9)',
-        }}>🧤</div>
+        }}><span style={{fontSize:9,fontWeight:900,letterSpacing:0.5,color:'#fff'}}>GK</span></div>
       </div>
 
       {/* Ball */}
@@ -515,7 +515,6 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
       <style>{CSS}</style>
       <StadiumBg/>
       <div className="relative z-10 w-full max-w-xs text-center">
-        <div className="text-4xl mb-4">🎟️</div>
         <p className="text-xs tracking-widest uppercase text-muted-foreground mb-2">You're in! Your code is</p>
         <div className="text-6xl font-black font-mono tracking-[0.3em] text-primary mb-2" style={{textShadow:'0 0 40px rgba(201,162,39,0.6)',animation:'scaleIn 0.4s ease'}}>
           {myCode}
@@ -580,7 +579,7 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
             </div>
             {err && <p className="text-destructive text-xs">{err}</p>}
             <Button className="w-full" size="lg" disabled={busy} onClick={handleSubmit}>
-              {busy ? '…' : noTournament ? '🏟️ Create Tournament' : '⚽ Join Tournament'}
+              {busy ? '…' : noTournament ? 'Create Tournament' : 'Join Tournament'}
             </Button>
             <div className="flex items-center gap-3">
               <Separator className="flex-1"/>
@@ -598,7 +597,7 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
                 onCPU(n);
               }}
             >
-              🤖 Play Solo vs CPU
+              Play Solo vs CPU
             </Button>
           </CardContent>
         </Card>
@@ -726,7 +725,7 @@ function RealtimeMatchScreen({ am, myCode }) {
               }}>{am.p2Score}</div>
             </div>
             <div style={{ color:'rgba(255,255,255,0.28)', fontSize:9, letterSpacing:2, textTransform:'uppercase', marginTop:1 }}>
-              {am.isSuddenDeath ? '⚡ SD' : `Kick ${Math.min(am.currentKick, TOTAL_KICKS)}/${TOTAL_KICKS}`}
+              {am.isSuddenDeath ? 'SUDDEN DEATH' : `Kick ${Math.min(am.currentKick, TOTAL_KICKS)}/${TOTAL_KICKS}`}
             </div>
           </div>
           <div style={{ flex:1, textAlign:'right' }}>
@@ -798,8 +797,8 @@ function RealtimeMatchScreen({ am, myCode }) {
               animation:'fadeSlideUp 0.5s 0.25s ease both',
             }}>
               {isGoal
-                ? `🔥 ${(kr.scorer === 'p1' ? am.p1.name : am.p2.name).split(' ')[0]} scored!`
-                : `🧤 Saved!`}
+                ? `${(kr.scorer === 'p1' ? am.p1.name : am.p2.name).split(' ')[0]} scored`
+                : `Saved`}
             </div>
           </div>
         )}
@@ -818,7 +817,7 @@ function RealtimeMatchScreen({ am, myCode }) {
               color: am.winner === myCode ? '#ffd700' : '#ff6b35',
               textShadow: am.winner === myCode ? '0 0 50px rgba(255,215,0,0.6)' : 'none',
             }}>
-              {am.winner === myCode ? '🏆 You Win!' : '💀 You Lose'}
+              {am.winner === myCode ? 'You Win' : 'You Lose'}
             </div>
             <div style={{color:'rgba(255,255,255,0.5)',fontSize:18,marginTop:8}}>{am.p1Score} – {am.p2Score}</div>
             <div style={{color:'rgba(255,255,255,0.3)',fontSize:11,marginTop:16,letterSpacing:2}}>
@@ -834,7 +833,6 @@ function RealtimeMatchScreen({ am, myCode }) {
             display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
             background:'rgba(0,0,0,0.7)',
           }}>
-            <div style={{fontSize:36,marginBottom:14}}>⏳</div>
             <div style={{color:'#fff',fontSize:18,fontWeight:700,marginBottom:6}}>
               {theyHaveSubmitted ? 'Both in — resolving…' : `Waiting for ${them.name.split(' ')[0]}…`}
             </div>
@@ -853,7 +851,7 @@ function RealtimeMatchScreen({ am, myCode }) {
             borderRadius:20, padding:'6px 16px',
             backdropFilter:'blur(8px)',
           }}>
-            <span style={{fontSize:14}}>{iAmShooter ? '⚽' : '🧤'}</span>
+            <span style={{fontSize:9,fontWeight:900,letterSpacing:1,opacity:0.7}}>{iAmShooter ? 'ATK' : 'DEF'}</span>
             <span style={{
               color: iAmShooter ? '#C9A227' : '#40c4ff',
               fontSize:10, fontWeight:800, letterSpacing:2.5, textTransform:'uppercase',
@@ -868,12 +866,12 @@ function RealtimeMatchScreen({ am, myCode }) {
                 animation: timerUrgent ? 'timerUrgent 0.6s ease infinite' : 'none',
               }}>{timer}s</span>
             )}
-            {am.isSuddenDeath && <span style={{color:'#ffd700',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>⚡SD</span>}
+            {am.isSuddenDeath && <span style={{color:'#ffd700',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>SD</span>}
           </div>
           <div style={{color:'rgba(255,255,255,0.5)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',textAlign:'center',minHeight:14,textShadow:'0 1px 4px rgba(0,0,0,0.9)'}}>
             {am.phase === 'picking' && !iHaveSubmitted
               ? (iAmShooter ? 'Tap to aim your shot' : 'Tap to choose dive direction')
-              : localPhase === 'animating' ? '⚡ Resolving...' : ''}
+              : localPhase === 'animating' ? 'Resolving...' : ''}
           </div>
         </div>
       </div>
@@ -928,7 +926,7 @@ function SpectatorMatchView({ am }) {
               <div key={am.p2Score+100} style={{fontSize:36,fontWeight:900,color:'#fff',minWidth:36,textAlign:'center',fontFamily:'Impact,sans-serif',lineHeight:1,animation:'scorePopIn 0.35s ease'}}>{am.p2Score}</div>
             </div>
             <div style={{color:'rgba(255,255,255,0.28)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginTop:1}}>
-              {am.isSuddenDeath ? '⚡ SD' : `Kick ${Math.min(am.currentKick, TOTAL_KICKS)}/${TOTAL_KICKS}`}
+              {am.isSuddenDeath ? 'SUDDEN DEATH' : `Kick ${Math.min(am.currentKick, TOTAL_KICKS)}/${TOTAL_KICKS}`}
             </div>
           </div>
           <div style={{ flex:1, textAlign:'right' }}>
@@ -1238,7 +1236,7 @@ function CPUMatchScreen({ playerName, roundLabel, onDone }) {
               {isGoalNow ? 'GOAL!' : 'SAVED!'}
             </div>
             <div style={{position:'absolute',left:'50%',top:'62%',transform:'translateX(-50%)',color:'rgba(255,255,255,0.65)',fontSize:12,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center',animation:'fadeSlideUp 0.5s 0.25s ease both'}}>
-              {isGoalNow ? `🔥 ${kr.scorer==='player' ? playerName.split(' ')[0] : 'CPU'} scored!` : '🧤 Saved!'}
+              {isGoalNow ? `${kr.scorer==='player' ? playerName.split(' ')[0] : 'CPU'} scored` : 'Saved'}
             </div>
           </div>
         )}
@@ -1246,7 +1244,7 @@ function CPUMatchScreen({ playerName, roundLabel, onDone }) {
         {phase === 'done' && (
           <div style={{position:'absolute',inset:0,zIndex:25,background:'rgba(0,0,0,0.78)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',animation:'scaleIn 0.5s ease'}}>
             <div style={{fontSize:52,fontWeight:900,fontFamily:'Impact,sans-serif',textTransform:'uppercase',letterSpacing:1,color:winner==='player'?'#ffd700':'#ff6b35',textShadow:winner==='player'?'0 0 50px rgba(255,215,0,0.6)':'none'}}>
-              {winner === 'player' ? '🏆 You Win!' : '💀 You Lose'}
+              {winner === 'player' ? 'You Win' : 'You Lose'}
             </div>
             <div style={{color:'rgba(255,255,255,0.5)',fontSize:18,marginTop:8}}>{p1Score} – {p2Score}</div>
             <Button onClick={() => onDone(winner === 'player')} size="lg" style={{marginTop:24}}>Continue →</Button>
@@ -1256,14 +1254,14 @@ function CPUMatchScreen({ playerName, roundLabel, onDone }) {
         {/* Role pill + hint pinned to bottom */}
         <div style={{position:'absolute',bottom:16,left:0,right:0,zIndex:15,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
           <div style={{display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.55)',border:`1px solid ${iAmShooter?'rgba(201,162,39,0.6)':'rgba(64,196,255,0.5)'}`,borderRadius:20,padding:'6px 16px',backdropFilter:'blur(8px)'}}>
-            <span style={{fontSize:14}}>{iAmShooter ? '⚽' : '🧤'}</span>
+            <span style={{fontSize:9,fontWeight:900,letterSpacing:1,opacity:0.7}}>{iAmShooter ? 'ATK' : 'DEF'}</span>
             <span style={{color:iAmShooter?'#C9A227':'#40c4ff',fontSize:10,fontWeight:800,letterSpacing:2.5,textTransform:'uppercase'}}>
               {playerName.split(' ')[0]} — {iAmShooter ? 'SHOOT' : 'SAVE'}
             </span>
-            {sd && <span style={{color:'#ffd700',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>⚡SD</span>}
+            {sd && <span style={{color:'#ffd700',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>SD</span>}
           </div>
           <div style={{color:'rgba(255,255,255,0.5)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',textAlign:'center',minHeight:14,textShadow:'0 1px 4px rgba(0,0,0,0.9)'}}>
-            {phase === 'picking' ? (iAmShooter ? 'Tap to aim your shot' : 'Tap to choose dive direction') : phase === 'animating' ? '⚡ Resolving...' : ''}
+            {phase === 'picking' ? (iAmShooter ? 'Tap to aim your shot' : 'Tap to choose dive direction') : phase === 'animating' ? 'Resolving...' : ''}
           </div>
         </div>
       </div>
@@ -1307,7 +1305,7 @@ function CPUBracketScreen({ playerName, onExit }) {
         <StadiumBg/>
         <Confetti/>
         <div className="relative z-10 flex flex-col items-center gap-3">
-          <div className="text-7xl" style={{animation:'floatBob 2s ease-in-out infinite'}}>🏆</div>
+          <img src="/daf-logo.png" draggable={false} style={{height:100,objectFit:'contain',animation:'floatBob 2s ease-in-out infinite',filter:'drop-shadow(0 0 30px rgba(201,162,39,0.7))'}} alt=""/>
           <div className="text-5xl font-black uppercase tracking-widest" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',color:'#ffd700',textShadow:'0 0 60px rgba(255,215,0,0.6)',animation:'scaleIn 0.5s ease'}}>CHAMPION!</div>
           <div className="text-xl font-bold text-foreground">{playerName}</div>
           <Badge variant="warning" className="text-xs tracking-widest uppercase">Beat all {CPU_ROUNDS.length} CPU rounds</Badge>
@@ -1322,7 +1320,6 @@ function CPUBracketScreen({ playerName, onExit }) {
       <div className="h-full flex flex-col items-center justify-center relative overflow-hidden text-center p-10" style={{background:'#080b14'}}>
         <StadiumBg/>
         <div className="relative z-10 flex flex-col items-center gap-3">
-          <div className="text-6xl">💀</div>
           <div className="text-4xl font-black uppercase tracking-widest" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',color:'#ff6b35'}}>ELIMINATED</div>
           <p className="text-muted-foreground text-sm">You reached the {CPU_ROUNDS[roundIdx]}</p>
           <p className="text-muted-foreground text-xs tracking-wide">
@@ -1343,7 +1340,7 @@ function CPUBracketScreen({ playerName, onExit }) {
       <div className="flex items-center gap-3 px-4 py-3 relative z-10" style={{background:'rgba(0,0,0,0.55)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
         <Button variant="ghost" size="icon" onClick={onExit} className="text-muted-foreground text-lg">←</Button>
         <div>
-          <div className="text-[10px] tracking-[0.25em] uppercase font-bold text-yellow-400">🤖 Solo vs CPU</div>
+          <div className="text-[10px] tracking-[0.25em] uppercase font-bold text-yellow-400">Solo vs CPU</div>
           <div className="text-muted-foreground text-[10px] mt-0.5">DAF World Cup 2026</div>
         </div>
         <span className="ml-auto text-sm font-semibold text-foreground/70">{playerName}</span>
@@ -1409,7 +1406,7 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
       <div className="flex items-center gap-3 px-4 py-3 relative z-10" style={{background:'rgba(0,0,0,0.55)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
         <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground text-lg">←</Button>
         <div>
-          <div className="text-[10px] tracking-[0.25em] uppercase font-bold text-yellow-400">🏆 Tournament Bracket</div>
+          <div className="text-[10px] tracking-[0.25em] uppercase font-bold text-yellow-400">DAF World Cup 2026</div>
           <div className="text-muted-foreground text-[10px] mt-0.5">
             {myCode && <span className="font-mono text-primary mr-1.5">{myCode}</span>}
             DAF World Cup 2026
@@ -1447,7 +1444,7 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
               <div className="flex gap-2">
                 <Button variant="secondary" className="flex-1" onClick={() => { setPendingMatch(null); setErr(''); }}>Cancel</Button>
                 <Button className="flex-[2]" disabled={busy || !pendingMatch.p1?.name || !pendingMatch.p2?.name} onClick={handleKickOff}>
-                  {busy ? '…' : '⚽ Kick Off'}
+                  {busy ? '…' : 'Kick Off'}
                 </Button>
               </div>
               {(!pendingMatch.p1?.name || !pendingMatch.p2?.name) && (
@@ -1471,11 +1468,11 @@ function ChampionScreen({ name, onBack }) {
       <StadiumBg pulse/>
       <Confetti/>
       <div className="relative z-10 flex flex-col items-center gap-3">
-        <div className="text-7xl" style={{animation:'floatBob 1.5s ease-in-out infinite',filter:'drop-shadow(0 0 30px rgba(255,215,0,0.6))'}}>🏆</div>
+        <img src="/daf-logo.png" draggable={false} style={{height:110,objectFit:'contain',animation:'floatBob 1.5s ease-in-out infinite',filter:'drop-shadow(0 0 30px rgba(201,162,39,0.7))'}} alt=""/>
         <p className="text-[11px] tracking-[0.4em] uppercase font-black text-yellow-400" style={{textShadow:'0 0 25px rgba(255,215,0,0.5)'}}>DAF World Cup 2026</p>
         <div className="text-4xl font-black tracking-wide text-foreground" style={{fontFamily:'Impact,sans-serif',animation:'scaleIn 0.7s ease'}}>{name}</div>
         <Badge variant="success" className="text-xs tracking-widest uppercase px-4 py-1">DAF World Cup 2026 Champion</Badge>
-        <Button size="lg" className="mt-6" onClick={onBack}>🎉 Play Again</Button>
+        <Button size="lg" className="mt-6" onClick={onBack}>Play Again</Button>
       </div>
     </div>
   );
