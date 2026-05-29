@@ -27,7 +27,7 @@ const api = async (path, body) => {
     body: JSON.stringify(body),
   });
   const text = await r.text();
-  try { return JSON.parse(text); } catch { return { error: `${r.status} @ ${location.origin}${path}` }; }
+  try { return JSON.parse(text); } catch { return { error: `Server error (${r.status}) — try again` }; }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -163,29 +163,68 @@ const CSS = `
 // ═══════════════════════════════════════════════════════════════
 
 function StadiumBg({ pulse }) {
+  const CC = ['#e74c3c','#c0392b','#e67e22','#f39c12','#f1c40f','#27ae60','#2ecc71','#3498db','#2980b9','#9b59b6','#8e44ad','#1abc9c','#e91e63','#ff5722','#00bcd4','#ff9800','#4caf50','#607d8b','#f06292','#795548'];
   return (
-    <div style={{
-      position:'absolute', inset:0, zIndex:0, overflow:'hidden',
-      background:'linear-gradient(180deg,#050810 0%,#070c17 55%,#060a12 100%)',
-      animation: pulse ? 'goalFlashBg 0.8s ease' : 'none',
-    }}>
-      <div style={{
-        position:'absolute', top:'-10%', left:'50%', transform:'translateX(-50%)',
-        width:700, height:400,
-        background:'radial-gradient(ellipse, rgba(0,35,5,0.5) 0%, transparent 65%)',
-        pointerEvents:'none',
-      }}/>
-      <div style={{
-        position:'absolute', top:0, left:0, right:0, height:'40%',
-        backgroundImage:`radial-gradient(circle at 2px 2px, rgba(255,255,255,0.035) 1px, transparent 0)`,
-        backgroundSize:'22px 14px',
-        maskImage:'linear-gradient(180deg,rgba(0,0,0,0.8) 0%,transparent 100%)',
-        WebkitMaskImage:'linear-gradient(180deg,rgba(0,0,0,0.8) 0%,transparent 100%)',
-      }}/>
-      <div style={{
-        position:'absolute', bottom:0, left:0, right:0, height:'42%',
-        background:'linear-gradient(180deg,transparent 0%,rgba(0,55,15,0.18) 100%)',
-      }}/>
+    <div style={{position:'absolute',inset:0,zIndex:0,overflow:'hidden'}}>
+
+      {/* goal flash overlay */}
+      <div style={{position:'absolute',inset:0,zIndex:9,pointerEvents:'none',animation:pulse?'goalFlashBg 0.8s ease':'none'}}/>
+
+      {/* ── CROWD ── */}
+      <div style={{position:'absolute',top:0,left:0,right:0,height:'22%',overflow:'hidden'}}>
+        <svg width="100%" height="100%" viewBox="0 0 520 110" preserveAspectRatio="xMidYMid slice" style={{display:'block'}}>
+          <rect width="520" height="110" fill="#9c7c30"/>
+          {Array.from({length:135},(_,i)=>{
+            const row=Math.floor(i/27), col=i%27;
+            const x=col*20+(row%2)*10-5, y=row*22+18;
+            const ci=(row*7+col*3)%CC.length;
+            return (
+              <g key={i}>
+                <ellipse cx={x} cy={y+3} rx="8.5" ry="4" fill="rgba(0,0,0,0.22)"/>
+                <ellipse cx={x} cy={y} rx="8" ry="10.5" fill={CC[ci]} opacity="0.9"/>
+                <circle cx={x} cy={y-14} r="6" fill={CC[(ci+5)%CC.length]} opacity="0.85"/>
+              </g>
+            );
+          })}
+        </svg>
+        <div style={{position:'absolute',bottom:0,left:0,right:0,height:'45%',background:'linear-gradient(transparent,rgba(0,0,0,0.55))'}}/>
+      </div>
+
+      {/* ── HOARDINGS ── */}
+      <div style={{position:'absolute',top:'22%',left:0,right:0,height:'9%',display:'flex',alignItems:'stretch'}}>
+        <div style={{flex:'0 0 29%',background:'linear-gradient(90deg,#5c0a22,#8c1535)',display:'flex',alignItems:'center',justifyContent:'center',gap:6,borderBottom:'2.5px solid #3c0716'}}>
+          <div style={{width:'clamp(14px,3.5vw,20px)',height:'clamp(14px,3.5vw,20px)',border:'1.5px solid rgba(255,255,255,0.75)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'clamp(6px,1.8vw,11px)'}}>⚽</div>
+          <div style={{lineHeight:1.2}}>
+            <div style={{color:'#fff',fontWeight:900,letterSpacing:'0.1em',fontFamily:'"Arial Black",Arial,sans-serif',fontSize:'clamp(5px,1.5vw,10px)'}}>PENALTY</div>
+            <div style={{color:'rgba(255,255,255,0.6)',fontWeight:600,letterSpacing:'0.2em',fontFamily:'Arial,sans-serif',fontSize:'clamp(4px,1vw,7px)'}}>SHOWDOWN</div>
+          </div>
+        </div>
+        <div style={{flex:1,background:'#0d0d0d'}}/>
+        <div style={{flex:'0 0 29%',background:'linear-gradient(90deg,#8c1535,#5c0a22)',display:'flex',alignItems:'center',justifyContent:'center',gap:6,borderBottom:'2.5px solid #3c0716'}}>
+          <div style={{lineHeight:1.2,textAlign:'right'}}>
+            <div style={{color:'#fff',fontWeight:900,letterSpacing:'0.1em',fontFamily:'"Arial Black",Arial,sans-serif',fontSize:'clamp(5px,1.5vw,10px)'}}>PENALTY</div>
+            <div style={{color:'rgba(255,255,255,0.6)',fontWeight:600,letterSpacing:'0.2em',fontFamily:'Arial,sans-serif',fontSize:'clamp(4px,1vw,7px)'}}>SHOWDOWN</div>
+          </div>
+          <div style={{width:'clamp(14px,3.5vw,20px)',height:'clamp(14px,3.5vw,20px)',border:'1.5px solid rgba(255,255,255,0.75)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'clamp(6px,1.8vw,11px)'}}>⚽</div>
+        </div>
+      </div>
+
+      {/* ── PITCH ── */}
+      <div style={{position:'absolute',top:'31%',left:0,right:0,bottom:0,overflow:'hidden'}}>
+        {/* alternating vertical stripes */}
+        {Array.from({length:10},(_,i)=>(
+          <div key={i} style={{position:'absolute',top:0,bottom:0,left:`${i*10}%`,width:'10.5%',background:i%2===0?'#267518':'#2e8c1f'}}/>
+        ))}
+        {/* pitch markings */}
+        <svg style={{position:'absolute',inset:0,pointerEvents:'none'}} width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1="0" y1="1" x2="100" y2="1" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5"/>
+          <rect x="17" y="1" width="66" height="57" fill="none" stroke="rgba(255,255,255,0.88)" strokeWidth="0.65"/>
+          <rect x="33" y="1" width="34" height="17" fill="none" stroke="rgba(255,255,255,0.88)" strokeWidth="0.65"/>
+          <circle cx="50" cy="39" r="0.9" fill="rgba(255,255,255,0.9)"/>
+          <path d="M 24.2,58 A 32,32 0 0 1 75.8,58" fill="none" stroke="rgba(255,255,255,0.88)" strokeWidth="0.65"/>
+        </svg>
+      </div>
+
     </div>
   );
 }
