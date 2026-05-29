@@ -37,10 +37,10 @@ const api = async (path, body) => {
 
 const CSS = `
   @keyframes stampIn {
-    0% { transform: translate(-50%,-50%) scale(3) rotate(-8deg); opacity: 0; }
-    40% { transform: translate(-50%,-50%) scale(0.88) rotate(2deg); opacity: 1; }
-    65% { transform: translate(-50%,-50%) scale(1.04) rotate(-1deg); }
-    100% { transform: translate(-50%,-50%) scale(1) rotate(0deg); opacity: 1; }
+    0% { transform: translate(-50%,-50%) scale(3.2) rotate(-12deg); opacity: 0; }
+    40% { transform: translate(-50%,-50%) scale(0.86) rotate(4deg); opacity: 1; }
+    65% { transform: translate(-50%,-50%) scale(1.06) rotate(-2.5deg); }
+    100% { transform: translate(-50%,-50%) scale(1) rotate(-2deg); opacity: 1; }
   }
   @keyframes floatBob {
     0%,100% { transform: translateY(0px); }
@@ -528,82 +528,88 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
   );
 
   return (
-    <div className="min-h-full flex flex-col items-center justify-center p-10 relative overflow-hidden" style={{background:'#080b14'}}>
+    <div style={{minHeight:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 28px',position:'relative',overflow:'hidden',background:'#080b14'}}>
       <style>{CSS}</style>
       <StadiumBg/>
-      <div className="relative z-10 w-full max-w-sm text-center">
+
+      {/* Large faded watermark logo */}
+      <img src="/daf-logo.png" draggable={false} aria-hidden style={{
+        position:'absolute',left:'50%',top:'46%',transform:'translate(-50%,-50%)',
+        height:480,objectFit:'contain',opacity:0.035,pointerEvents:'none',filter:'grayscale(1)',
+      }}/>
+
+      <div style={{position:'relative',zIndex:10,width:'100%',maxWidth:340,textAlign:'center'}}>
+
         {/* Draggable logo */}
         <div onMouseDown={dragLogo} style={{
-          display:'inline-block', position:'relative', marginBottom:16,
+          display:'inline-block',position:'relative',marginBottom:12,
           transform:`translate(${logo.x}px,${logo.y}px)`,
-          cursor:'grab', userSelect:'none', touchAction:'none',
+          cursor:'grab',userSelect:'none',touchAction:'none',
         }}>
           <img src="/daf-logo.png" draggable={false} style={{height:logo.h,objectFit:'contain',filter:'drop-shadow(0 0 24px rgba(201,162,39,0.45))',display:'block',pointerEvents:'none'}} alt="DAF World Cup 2026"/>
-          {/* Resize handle */}
-          <div onMouseDown={resizeLogo} style={{
-            position:'absolute', bottom:-5, right:-5,
-            width:13, height:13, background:'#C9A227', borderRadius:3,
-            cursor:'nwse-resize', border:'2px solid rgba(0,0,0,0.6)',
-            zIndex:10,
-          }}/>
+          <div onMouseDown={resizeLogo} style={{position:'absolute',bottom:-5,right:-5,width:13,height:13,background:'#C9A227',borderRadius:3,cursor:'nwse-resize',border:'2px solid rgba(0,0,0,0.6)',zIndex:10}}/>
         </div>
 
         {/* Draggable title */}
         <div onMouseDown={dragTitle} style={{
-          display:'inline-block', position:'relative',
+          display:'inline-block',position:'relative',marginBottom:36,
           transform:`translate(${title.x}px,${title.y}px)`,
-          cursor:'grab', userSelect:'none', touchAction:'none', marginBottom:32,
+          cursor:'grab',userSelect:'none',touchAction:'none',
         }}>
-          <h1 className="text-3xl font-black uppercase tracking-widest mb-1" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',textShadow:'0 0 40px rgba(201,162,39,0.35)'}}>
+          <h1 style={{fontFamily:"'Bebas Neue','Barlow Condensed',Impact,sans-serif",fontSize:42,letterSpacing:'0.12em',lineHeight:1,margin:0,textShadow:'0 0 50px rgba(201,162,39,0.4)'}}>
             DAF <span style={{color:'#C9A227'}}>WORLD CUP</span>
           </h1>
-          <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground">2026</p>
+          <p style={{fontSize:10,letterSpacing:'0.45em',textTransform:'uppercase',color:'rgba(255,255,255,0.35)',marginTop:4,marginBottom:0}}>2026</p>
         </div>
 
-        <Card className="bg-transparent border-border/40 text-left">
-          <CardContent className="pt-6 flex flex-col gap-4">
-            {noTournament && (
-              <p className="text-xs text-muted-foreground leading-relaxed text-center">
-                No tournament running yet — enter your name to create one
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] tracking-[0.2em] uppercase font-bold text-muted-foreground">Your Name</label>
-              <Input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                placeholder="Enter your name..."
-                autoFocus
-              />
-            </div>
-            {err && <p className="text-destructive text-xs">{err}</p>}
-            <Button className="w-full" size="lg" disabled={busy} onClick={handleSubmit}>
-              {busy ? '…' : noTournament ? 'Create Tournament' : 'Join Tournament'}
-            </Button>
-            <div className="flex items-center gap-3">
-              <Separator className="flex-1"/>
-              <span className="text-[10px] tracking-widest text-muted-foreground">OR</span>
-              <Separator className="flex-1"/>
-            </div>
-            <Button
-              variant="secondary"
-              className="w-full"
-              size="lg"
-              onClick={() => {
-                const n = name.trim();
-                if (!n) { setErr('Enter your name first'); return; }
-                localStorage.setItem('psc_name', n);
-                onCPU(n);
-              }}
-            >
-              Play Solo vs CPU
-            </Button>
-          </CardContent>
-        </Card>
+        {noTournament && (
+          <p style={{color:'rgba(255,255,255,0.3)',fontSize:10,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:20}}>
+            No tournament — enter your name to create one
+          </p>
+        )}
 
-        <p className="text-[10px] text-muted-foreground mt-5 tracking-wide">
-          {noTournament ? "48 slots · you'll be assigned a bracket code" : "You'll be assigned a random slot in the bracket"}
+        {/* Raw underline input */}
+        <div style={{marginBottom:20,textAlign:'left'}}>
+          <label style={{display:'block',color:'rgba(201,162,39,0.65)',fontSize:9,letterSpacing:'0.35em',textTransform:'uppercase',marginBottom:10,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:600}}>Your Name</label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            placeholder="Enter your name"
+            autoFocus
+            style={{
+              width:'100%',padding:'10px 0',background:'transparent',
+              border:'none',borderBottom:'1px solid rgba(201,162,39,0.3)',
+              color:'#fff',fontSize:18,fontFamily:"'Barlow Condensed',sans-serif",
+              fontWeight:600,letterSpacing:'0.05em',outline:'none',
+              caretColor:'#C9A227',
+            }}
+          />
+        </div>
+
+        {err && <p style={{color:'#ff4444',fontSize:11,marginBottom:12,textAlign:'left',letterSpacing:'0.05em'}}>{err}</p>}
+
+        <button className="prim-btn" style={{width:'100%',height:50,marginBottom:14,fontSize:13,letterSpacing:'0.15em',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,borderRadius:4}} onClick={handleSubmit} disabled={busy}>
+          {busy ? '…' : noTournament ? 'Create Tournament' : 'Join Tournament'}
+        </button>
+
+        <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:14}}>
+          <div style={{flex:1,height:'1px',background:'rgba(255,255,255,0.07)'}}/>
+          <span style={{color:'rgba(255,255,255,0.2)',fontSize:9,letterSpacing:'0.3em',fontFamily:"'Barlow Condensed',sans-serif"}}>OR</span>
+          <div style={{flex:1,height:'1px',background:'rgba(255,255,255,0.07)'}}/>
+        </div>
+
+        <button className="sec-btn" style={{width:'100%',height:46,borderRadius:4,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:600,fontSize:13,letterSpacing:'0.12em'}} onClick={() => {
+          const n = name.trim();
+          if (!n) { setErr('Enter your name first'); return; }
+          localStorage.setItem('psc_name', n);
+          onCPU(n);
+        }}>
+          Play Solo vs CPU
+        </button>
+
+        <p style={{color:'rgba(255,255,255,0.18)',fontSize:9,marginTop:22,letterSpacing:'0.2em',textTransform:'uppercase',fontFamily:"'Barlow Condensed',sans-serif"}}>
+          {noTournament ? "48 player slots · code assigned on join" : "You'll be assigned a random bracket slot"}
         </p>
       </div>
     </div>
@@ -713,15 +719,17 @@ function RealtimeMatchScreen({ am, myCode }) {
           <div style={{ textAlign:'center', padding:'0 12px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <div key={am.p1Score} style={{
-                fontSize:36, fontWeight:900, color:'#fff', minWidth:36, textAlign:'center',
-                fontFamily:'Impact,"Arial Narrow Bold",sans-serif', lineHeight:1,
-                animation:'scorePopIn 0.35s ease',
+                fontSize:44,color:'#fff',minWidth:52,textAlign:'center',lineHeight:1,
+                fontFamily:"'Bebas Neue',Impact,sans-serif",letterSpacing:'0.06em',
+                padding:'3px 10px',background:'rgba(0,0,0,0.5)',borderRadius:3,
+                border:'1px solid rgba(201,162,39,0.12)',animation:'scorePopIn 0.35s ease',
               }}>{am.p1Score}</div>
-              <div style={{ color:'rgba(255,255,255,0.25)', fontSize:20, fontWeight:200 }}>:</div>
+              <div style={{color:'rgba(255,255,255,0.2)',fontSize:18,fontWeight:100,padding:'0 2px'}}>—</div>
               <div key={am.p2Score+100} style={{
-                fontSize:36, fontWeight:900, color:'#fff', minWidth:36, textAlign:'center',
-                fontFamily:'Impact,"Arial Narrow Bold",sans-serif', lineHeight:1,
-                animation:'scorePopIn 0.35s ease',
+                fontSize:44,color:'#fff',minWidth:52,textAlign:'center',lineHeight:1,
+                fontFamily:"'Bebas Neue',Impact,sans-serif",letterSpacing:'0.06em',
+                padding:'3px 10px',background:'rgba(0,0,0,0.5)',borderRadius:3,
+                border:'1px solid rgba(201,162,39,0.12)',animation:'scorePopIn 0.35s ease',
               }}>{am.p2Score}</div>
             </div>
             <div style={{ color:'rgba(255,255,255,0.28)', fontSize:9, letterSpacing:2, textTransform:'uppercase', marginTop:1 }}>
@@ -779,8 +787,8 @@ function RealtimeMatchScreen({ am, myCode }) {
             <div style={{
               position:'absolute', left:'50%', top:'42%',
               fontSize:58, fontWeight:900,
-              fontFamily:'Impact,"Arial Narrow Bold",sans-serif',
-              letterSpacing:1, textTransform:'uppercase',
+              fontFamily:"'Bebas Neue','Barlow Condensed',Impact,sans-serif",
+              letterSpacing:4, textTransform:'uppercase',
               color: isGoal ? '#C9A227' : '#ff1744',
               textShadow: isGoal
                 ? '0 0 60px rgba(201,162,39,0.95),0 0 120px rgba(201,162,39,0.5)'
@@ -813,7 +821,7 @@ function RealtimeMatchScreen({ am, myCode }) {
           }}>
             <div style={{
               fontSize:52, fontWeight:900,
-              fontFamily:'Impact,sans-serif', textTransform:'uppercase', letterSpacing:1,
+              fontFamily:"'Bebas Neue','Barlow Condensed',Impact,sans-serif", textTransform:'uppercase', letterSpacing:4,
               color: am.winner === myCode ? '#ffd700' : '#ff6b35',
               textShadow: am.winner === myCode ? '0 0 50px rgba(255,215,0,0.6)' : 'none',
             }}>
@@ -1193,12 +1201,12 @@ function CPUMatchScreen({ playerName, roundLabel, onDone }) {
           </div>
           <div style={{textAlign:'center',padding:'0 12px'}}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <div key={p1Score} style={{fontSize:36,fontWeight:900,color:'#fff',minWidth:36,textAlign:'center',fontFamily:'Impact,"Arial Narrow Bold",sans-serif',lineHeight:1,animation:'scorePopIn 0.35s ease'}}>{p1Score}</div>
-              <div style={{color:'rgba(255,255,255,0.25)',fontSize:20,fontWeight:200}}>:</div>
-              <div key={p2Score+100} style={{fontSize:36,fontWeight:900,color:'#fff',minWidth:36,textAlign:'center',fontFamily:'Impact,"Arial Narrow Bold",sans-serif',lineHeight:1,animation:'scorePopIn 0.35s ease'}}>{p2Score}</div>
+              <div key={p1Score} style={{fontSize:44,color:'#fff',minWidth:52,textAlign:'center',lineHeight:1,fontFamily:"'Bebas Neue',Impact,sans-serif",letterSpacing:'0.06em',padding:'3px 10px',background:'rgba(0,0,0,0.5)',borderRadius:3,border:'1px solid rgba(201,162,39,0.12)',animation:'scorePopIn 0.35s ease'}}>{p1Score}</div>
+              <div style={{color:'rgba(255,255,255,0.2)',fontSize:18,fontWeight:100,padding:'0 2px'}}>—</div>
+              <div key={p2Score+100} style={{fontSize:44,color:'#fff',minWidth:52,textAlign:'center',lineHeight:1,fontFamily:"'Bebas Neue',Impact,sans-serif",letterSpacing:'0.06em',padding:'3px 10px',background:'rgba(0,0,0,0.5)',borderRadius:3,border:'1px solid rgba(201,162,39,0.12)',animation:'scorePopIn 0.35s ease'}}>{p2Score}</div>
             </div>
             <div style={{color:'rgba(255,255,255,0.28)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginTop:1}}>
-              {sd ? '⚡ SD' : `Kick ${Math.min(kickNum, TOTAL_KICKS)}/${TOTAL_KICKS}`}
+              {sd ? 'SUDDEN DEATH' : `Kick ${Math.min(kickNum, TOTAL_KICKS)}/${TOTAL_KICKS}`}
             </div>
           </div>
           <div style={{flex:1,textAlign:'right'}}>
@@ -1541,6 +1549,11 @@ export default function App() {
   return (
     <div style={{ height:'100vh', overflow:'hidden', background:'#080b14', fontFamily:"'Trebuchet MS',sans-serif" }}>
       <style>{CSS}</style>
+
+      {/* Gold brand stripe */}
+      <div style={{position:'fixed',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#8B6914,#C9A227,#ffd700,#C9A227,#8B6914)',zIndex:9999,pointerEvents:'none'}}/>
+      {/* Film grain overlay */}
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:9998,opacity:0.045,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")`}}/>
 
       {screen === 'loading' && (
         <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'#080b14',position:'relative',overflow:'hidden'}}>
