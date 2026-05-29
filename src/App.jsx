@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -7,10 +12,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const ZONES = ['tl','tc','tr','bl','bc','br'];
 const ZONE_LABELS = { tl:'Top Left', tc:'Top Centre', tr:'Top Right', bl:'Bottom Left', bc:'Bottom Centre', br:'Bottom Right' };
 const ZONE_ICONS = { tl:'↖', tc:'↑', tr:'↗', bl:'↙', bc:'↓', br:'↘' };
-const ZONE_POS = {
-  tl:{x:16,y:23}, tc:{x:50,y:23}, tr:{x:84,y:23},
-  bl:{x:16,y:66}, bc:{x:50,y:66}, br:{x:84,y:66},
-};
 const TOTAL_KICKS = 6;
 const CHOOSE_TIME = 9; // seconds shown on client countdown
 
@@ -208,7 +209,7 @@ function Confetti() {
     id:i, x:Math.random()*100,
     delay:Math.random()*1.5,
     dur:2.2+Math.random()*2.5,
-    color:['#00e676','#ffd700','#ff6b35','#e040fb','#40c4ff','#ffffff'][Math.floor(Math.random()*6)],
+    color:['#ffd700','#C9A227','#00e676','#004225','#ff6b35','#ffffff'][Math.floor(Math.random()*6)],
     size:5+Math.random()*7,
     isRect:Math.random()>0.5,
   }));
@@ -227,168 +228,225 @@ function Confetti() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// GOAL VISUAL
+// PENALTY OVERLAY — zones/ball/keeper as absolute overlays on PitchBg
 // ═══════════════════════════════════════════════════════════════
 
-function GoalVisual({ phase, shotZone, saveZone, isGoal }) {
-  const isAnim = phase==='animating'||phase==='result';
-  const showReveal = phase==='result';
+const CALIBRATE = false;
 
-  const ballPos = isAnim && shotZone ? ZONE_POS[shotZone] : { x:50, y:93 };
-  const keeperPos = isAnim && saveZone ? ZONE_POS[saveZone] : { x:50, y:42 };
+// ── Goal position in stadium.png (fractions of image dimensions 1366×1450) ──
+// Calibrated 2026-05-29 (exact from readout)
+const IMG_W     = 1366;
+const IMG_H     = 1450;
+const GOAL_XL   = 0.2810;  // left post
+const GOAL_XR   = 0.7190;  // right post
+const GOAL_YTOP = 0.1301;  // crossbar
+const GOAL_YBOT = 0.3384;  // goal ground
+const SPOT_Y    = 0.6221;  // penalty spot
+
+// Computes goal/ball/keeper positions as % of the main area at the current window size.
+// Re-runs on every resize so the grid always tracks the goal in the image.
+function useGoalLayout(areaRef) {
+  const [layout, setLayout] = useState(null);
+
+  const compute = useCallback(() => {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    // Score bar top offset — use ref if available, else fall back to 0
+    const areaTop = areaRef.current ? areaRef.current.getBoundingClientRect().top : 0;
+    const areaH = H - areaTop;
+    if (!W || !areaH) return;
+
+    // cover scaling
+    const scale = Math.max(W / IMG_W, H / IMG_H);
+    const rw = IMG_W * scale;
+    const rh = IMG_H * scale;
+    const ox = (W - rw) / 2;
+
+    const vL = ox + GOAL_XL * rw;
+    const vR = ox + GOAL_XR * rw;
+    const vT = GOAL_YTOP * rh;
+    const vB = GOAL_YBOT * rh;
+    const vS = SPOT_Y * rh;
+
+    // main area spans full width, starts at areaTop
+    const px = vx => vx / W * 100;
+    const py = vy => (vy - areaTop) / areaH * 100;
+
+    const gL = px(vL), gR = 100 - px(vR);
+    const gT = py(vT), gB = 100 - py(vB);
+    const gW = 100 - gL - gR;
+    const gH = 100 - gT - gB;
+    const cx = c => gL + gW / 3 * (c + 0.5);
+    const cy = r => gT + gH / 2 * (r + 0.5);
+
+    setLayout({
+      grid:    { top:`${gT}%`, left:`${gL}%`, right:`${gR}%`, bottom:`${gB}%` },
+      centers: {
+        tl:{x:cx(0),y:cy(0)}, tc:{x:cx(1),y:cy(0)}, tr:{x:cx(2),y:cy(0)},
+        bl:{x:cx(0),y:cy(1)}, bc:{x:cx(1),y:cy(1)}, br:{x:cx(2),y:cy(1)},
+      },
+      ball:   { x:50, y: Math.min(93, py(vS)) },
+      keeper: { x:50, y: gT + gH / 2 },
+    });
+  }, []);
+
+  useEffect(() => {
+    // rAF ensures the DOM has finished layout before we measure
+    const id = requestAnimationFrame(compute);
+    window.addEventListener('resize', compute);
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', compute); };
+  }, [compute]);
+
+  return layout;
+}
+
+// Ball-only calibration — drag the ball to the penalty spot, read SPOT_Y
+function CalibBallOnly({ areaRef }) {
+  const [ball, setBall] = useState({ x:50, y:72 });
+  const clientXY = e => e.touches ? [e.touches[0].clientX, e.touches[0].clientY] : [e.clientX, e.clientY];
+  const onDown = e => {
+    e.preventDefault(); e.stopPropagation();
+    const area = areaRef.current;
+    if (!area) return;
+    const rect = area.getBoundingClientRect();
+    const onMove = me => {
+      const [cx, cy] = clientXY(me);
+      setBall({
+        x: Math.max(0, Math.min(100, (cx - rect.left) / rect.width * 100)),
+        y: Math.max(0, Math.min(100, (cy - rect.top)  / rect.height * 100)),
+      });
+    };
+    const onUp = () => { window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onUp); };
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+    window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onUp);
+  };
+
+  // Compute SPOT_Y from ball position
+  const el = areaRef.current;
+  let spotY = '…';
+  if (el) {
+    const areaTop = el.getBoundingClientRect().top;
+    const H = window.innerHeight, W = window.innerWidth;
+    const scale = Math.max(W / IMG_W, H / IMG_H);
+    const rh = IMG_H * scale;
+    const vBallY = ball.y / 100 * (H - areaTop) + areaTop;
+    spotY = (vBallY / rh).toFixed(4);
+  }
+
+  return (
+    <>
+      {/* draggable ball */}
+      <div onMouseDown={onDown} onTouchStart={onDown} style={{
+        position:'absolute', left:`${ball.x}%`, top:`${ball.y}%`,
+        transform:'translate(-50%,-50%)', zIndex:35, touchAction:'none', cursor:'grab',
+        width:22, height:22, borderRadius:'50%',
+        background:'radial-gradient(circle at 38% 35%,#fff 0%,#e0e0e0 55%,#bbb 100%)',
+        border:'3px solid #ff0', boxShadow:'0 0 0 2px #000, 0 2px 8px rgba(0,0,0,0.9)',
+      }}/>
+      {/* readout */}
+      <div style={{
+        position:'absolute', bottom:8, left:'50%', transform:'translateX(-50%)',
+        background:'rgba(0,0,0,0.95)', color:'#ff0', fontSize:12, fontFamily:'monospace',
+        padding:'6px 14px', borderRadius:6, whiteSpace:'nowrap', zIndex:40,
+        border:'1px solid #ff0', letterSpacing:1,
+      }}>
+        SPOT_Y: {spotY}
+      </div>
+    </>
+  );
+}
+
+function PenaltyOverlay({ phase, shotZone, saveZone, isGoal, picking, myZone, onPick }) {
+  const areaRef    = useRef(null);
+  const layout     = useGoalLayout(areaRef);
+  const isAnim     = phase === 'animating' || phase === 'result';
+  const showReveal = phase === 'result';
+
+  const centers = layout?.centers;
+  const ballPos = isAnim && shotZone && centers ? centers[shotZone] : (layout?.ball  ?? { x:50, y:72 });
+  const keepPos = isAnim && saveZone && centers ? centers[saveZone] : (layout?.keeper ?? { x:50, y:20 });
 
   let keeperRotate = 0;
   if (saveZone) {
-    if (saveZone.includes('l')) keeperRotate = -35;
-    if (saveZone.includes('r')) keeperRotate = 35;
+    if (saveZone.includes('l')) keeperRotate = -40;
+    if (saveZone.includes('r')) keeperRotate = 40;
     if (saveZone.startsWith('t')) keeperRotate *= 0.6;
   }
 
   return (
-    <div style={{ width:'100%', maxWidth:400, margin:'0 auto', position:'relative' }}>
-      <div style={{
-        position:'relative',
-        width:'100%', paddingTop:'62%',
-        border:'4px solid rgba(255,255,255,0.92)',
-        borderBottom:'none', borderRadius:'3px 3px 0 0',
-        background:'rgba(0,0,0,0.35)',
-        overflow:'hidden',
-        animation: showReveal&&isGoal ? 'netBulge 0.5s ease' : 'none',
-      }}>
-        <div style={{
-          position:'absolute', inset:0,
-          backgroundImage:`
-            linear-gradient(rgba(255,255,255,0.055) 1px,transparent 1px),
-            linear-gradient(90deg,rgba(255,255,255,0.055) 1px,transparent 1px)
-          `,
-          backgroundSize:'33.33% 50%',
-        }}/>
-        <div style={{
-          position:'absolute', inset:0,
-          background:'linear-gradient(180deg,rgba(0,0,0,0.5) 0%,rgba(0,0,0,0.1) 60%,transparent 100%)',
-        }}/>
+    <div ref={areaRef} style={{ position:'absolute', inset:0, pointerEvents: CALIBRATE ? 'all' : 'none' }}>
 
-        {/* Keeper */}
+      {CALIBRATE && <CalibBallOnly areaRef={areaRef}/>}
+
+      {/* 3×2 zone grid — dynamically positioned over the goal */}
+      {layout && (
         <div style={{
-          position:'absolute',
-          left:`${keeperPos.x}%`, top:`${keeperPos.y}%`,
-          transform:`translate(-50%,-50%) rotate(${isAnim?keeperRotate:0}deg)`,
-          transition: isAnim ? 'all 0.62s cubic-bezier(0.2,0,0.4,1)' : 'none',
-          zIndex:3,
+          position:'absolute', ...layout.grid,
+          display:'grid', gridTemplate:'1fr 1fr / 1fr 1fr 1fr',
+          gap:3, zIndex:8, pointerEvents:'all',
         }}>
-          <div style={{
-            width:30, height:30, borderRadius:'50%',
-            background:'linear-gradient(135deg,#ff6b35,#e55100)',
-            border:'2.5px solid rgba(255,255,255,0.7)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:13, boxShadow:'0 2px 8px rgba(0,0,0,0.5)',
-          }}>🧤</div>
-          <div style={{
-            width:22, height:10,
-            background:'linear-gradient(135deg,#ff6b35,#e55100)',
-            border:'1.5px solid rgba(255,255,255,0.5)',
-            borderRadius:5, margin:'-4px auto 0',
-            transform: saveZone?.includes('t') ? 'rotate(-30deg)' : 'none',
-          }}/>
-        </div>
-
-        {/* Ball */}
-        <div style={{
-          position:'absolute',
-          left:`${ballPos.x}%`, top:`${ballPos.y}%`,
-          transform:'translate(-50%,-50%)',
-          transition: isAnim ? 'all 0.72s cubic-bezier(0.25,0,0.3,1)' : 'none',
-          zIndex:4,
-          width:22, height:22,
-          background:'radial-gradient(circle at 38% 35%,#fff 0%,#ddd 50%,#bbb 100%)',
-          borderRadius:'50%',
-          border:'1.5px solid rgba(0,0,0,0.25)',
-          boxShadow:'2px 3px 8px rgba(0,0,0,0.6)',
-        }}>
-          <div style={{
-            position:'absolute', top:3, left:3, right:3, bottom:3,
-            borderRadius:'50%', border:'1px solid rgba(0,0,0,0.18)',
-          }}/>
-          <div style={{
-            position:'absolute', top:'50%', left:'50%',
-            width:6, height:6,
-            background:'rgba(0,0,0,0.15)', borderRadius:1,
-            transform:'translate(-50%,-50%) rotate(45deg)',
-          }}/>
-        </div>
-
-        {/* Zone reveal */}
-        {showReveal && (
-          <div style={{
-            position:'absolute', inset:'3px 3px 0',
-            display:'grid', gridTemplate:'1fr 1fr / 1fr 1fr 1fr',
-            gap:3, padding:4, zIndex:5,
-          }}>
-            {ZONES.map(z=>{
-              const isShot = z===shotZone;
-              const isSave = z===saveZone;
-              return (
-                <div key={z} style={{
-                  borderRadius:5,
-                  background: isShot&&isGoal ? 'rgba(0,230,118,0.22)'
-                    : isShot&&!isGoal ? 'rgba(255,23,68,0.2)'
-                    : isSave ? 'rgba(255,107,53,0.1)' : 'transparent',
-                  border: isShot ? `2px solid ${isGoal?'#00e676':'#ff1744'}`
-                    : isSave ? '1.5px solid rgba(255,107,53,0.4)' : 'none',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  fontSize:14,
+          {ZONES.map(z => {
+            const isShot = z === shotZone;
+            const isSave = z === saveZone;
+            let cls = 'zone-btn';
+            if (picking) {
+              if (myZone === z) cls += ' selected';
+            } else if (showReveal) {
+              if (isShot) cls += isGoal ? ' reveal-shot-goal' : ' reveal-shot-saved';
+              else if (isSave && !isGoal) cls += ' reveal-save';
+              else cls += ' reveal-none';
+            }
+            return (
+              <button key={z} className={cls}
+                onClick={() => picking && !myZone && onPick && onPick(z)}
+                disabled={!picking || !!myZone}
+                style={{
+                  opacity: picking && myZone && myZone !== z ? 0.4 : 1,
+                  background: cls === 'zone-btn' ? 'rgba(0,0,0,0.35)' : undefined,
+                  borderColor: cls === 'zone-btn' ? 'rgba(255,255,255,0.55)' : undefined,
+                  minHeight:0, gap:1, backdropFilter:'blur(2px)',
                 }}>
-                  {isShot && isGoal && '⚽'}
-                  {isShot && !isGoal && (isSave ? '🧤' : '')}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                {!showReveal && (
+                  <span style={{fontSize:16,filter:'drop-shadow(0 1px 4px rgba(0,0,0,1))'}}>
+                    {ZONE_ICONS[z]}
+                  </span>
+                )}
+                {showReveal && isShot && isGoal  && <span style={{fontSize:16}}>⚽</span>}
+                {showReveal && isShot && !isGoal && isSave && <span style={{fontSize:16}}>🧤</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      <div style={{ height:5, background:'rgba(255,255,255,0.92)', borderRadius:'0 0 2px 2px' }}/>
+      {/* Keeper */}
       <div style={{
-        height:48,
-        background:'linear-gradient(180deg,#1b4d22 0%,#143d1a 100%)',
-        borderRadius:'0 0 4px 4px',
-        position:'relative', overflow:'hidden',
+        position:'absolute',
+        left:`${keepPos.x}%`, top:`${keepPos.y}%`,
+        transform:`translate(-50%,-50%) rotate(${isAnim ? keeperRotate : 0}deg)`,
+        transition: isAnim ? 'all 0.62s cubic-bezier(0.2,0,0.4,1)' : 'none',
+        zIndex:9,
       }}>
-        {[0,1,2,3,4].map(i=>(
-          <div key={i} style={{
-            position:'absolute', top:0, bottom:0,
-            left:`${i*20}%`, width:'10%',
-            background:'rgba(255,255,255,0.025)',
-          }}/>
-        ))}
         <div style={{
-          position:'absolute', bottom:-24, left:'50%', transform:'translateX(-50%)',
-          width:80, height:50,
-          border:'1.5px solid rgba(255,255,255,0.18)',
-          borderRadius:'50%', borderBottom:'none',
-        }}/>
-        <div style={{
-          position:'absolute', top:'35%', left:'50%', transform:'translate(-50%,-50%)',
-          width:5, height:5, borderRadius:'50%',
-          background:'rgba(255,255,255,0.35)',
-        }}/>
-        <div style={{
-          position:'absolute', top:0, left:0, right:0, height:1.5,
-          background:'rgba(255,255,255,0.3)',
-        }}/>
+          width:32, height:32, borderRadius:'50%',
+          background:'linear-gradient(135deg,#ff6b35,#e55100)',
+          border:'2.5px solid rgba(255,255,255,0.9)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize:14, boxShadow:'0 2px 14px rgba(0,0,0,0.9)',
+        }}>🧤</div>
       </div>
 
+      {/* Ball */}
       <div style={{
-        position:'absolute', top:0, left:0, width:4,
-        height:'calc(100% - 48px - 5px)',
-        background:'rgba(255,255,255,0.92)',
-        boxShadow:'2px 0 8px rgba(0,0,0,0.4)',
-      }}/>
-      <div style={{
-        position:'absolute', top:0, right:0, width:4,
-        height:'calc(100% - 48px - 5px)',
-        background:'rgba(255,255,255,0.92)',
-        boxShadow:'-2px 0 8px rgba(0,0,0,0.4)',
+        position:'absolute',
+        left:`${ballPos.x}%`, top:`${ballPos.y}%`,
+        transform:'translate(-50%,-50%)',
+        transition: isAnim ? 'all 0.72s cubic-bezier(0.25,0,0.3,1)' : 'none',
+        zIndex:10,
+        width:22, height:22, borderRadius:'50%',
+        background:'radial-gradient(circle at 38% 35%,#fff 0%,#e0e0e0 55%,#bbb 100%)',
+        border:'1px solid rgba(0,0,0,0.3)',
+        boxShadow:'0 2px 12px rgba(0,0,0,0.95)',
       }}/>
     </div>
   );
@@ -398,11 +456,11 @@ function GoalVisual({ phase, shotZone, saveZone, isGoal }) {
 // LOGIN SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function LoginScreen({ serverState, onJoined }) {
-  const [name, setName]       = useState('');
-  const [err, setErr]         = useState('');
-  const [busy, setBusy]       = useState(false);
-  const [myCode, setMyCode]   = useState(null); // show code splash after joining
+function LoginScreen({ serverState, onJoined, onCPU }) {
+  const [name, setName]     = useState('');
+  const [err, setErr]       = useState('');
+  const [busy, setBusy]     = useState(false);
+  const [myCode, setMyCode] = useState(null);
 
   const noTournament = !serverState?.bracket;
 
@@ -423,69 +481,82 @@ function LoginScreen({ serverState, onJoined }) {
     setBusy(false);
   };
 
-  // Code splash — shown after getting assigned
   if (myCode) return (
-    <div style={{minHeight:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 20px',background:'#080b14',fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",position:'relative',overflow:'hidden'}}>
+    <div className="min-h-full flex flex-col items-center justify-center p-10 relative overflow-hidden" style={{background:'#080b14'}}>
       <style>{CSS}</style>
       <StadiumBg/>
-      <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:340,textAlign:'center'}}>
-        <div style={{fontSize:40,marginBottom:16}}>🎟️</div>
-        <div style={{color:'rgba(255,255,255,0.4)',fontSize:10,letterSpacing:3,textTransform:'uppercase',marginBottom:8}}>You're in! Your code is</div>
-        <div style={{
-          fontSize:56, fontWeight:900, fontFamily:'monospace', letterSpacing:10,
-          color:'#00e676', textShadow:'0 0 40px rgba(0,230,118,0.5)',
-          marginBottom:6, animation:'scaleIn 0.4s ease',
-        }}>{myCode}</div>
-        <div style={{color:'rgba(255,255,255,0.25)',fontSize:11,marginBottom:32}}>
-          Remember this — you'll need it to log back in from another device
+      <div className="relative z-10 w-full max-w-xs text-center">
+        <div className="text-4xl mb-4">🎟️</div>
+        <p className="text-xs tracking-widest uppercase text-muted-foreground mb-2">You're in! Your code is</p>
+        <div className="text-6xl font-black font-mono tracking-[0.3em] text-primary mb-2" style={{textShadow:'0 0 40px rgba(0,230,118,0.5)',animation:'scaleIn 0.4s ease'}}>
+          {myCode}
         </div>
-        <button onClick={()=>onJoined(myCode, name.trim())} className="prim-btn" style={{width:'100%',padding:'15px',fontSize:14}}>
+        <p className="text-xs text-muted-foreground mb-8">Remember this — you'll need it to log back in from another device</p>
+        <Button className="w-full" size="lg" onClick={() => onJoined(myCode, name.trim())}>
           Let's Go →
-        </button>
+        </Button>
       </div>
     </div>
   );
 
   return (
-    <div style={{minHeight:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 20px',background:'#080b14',fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",position:'relative',overflow:'hidden'}}>
+    <div className="min-h-full flex flex-col items-center justify-center p-10 relative overflow-hidden" style={{background:'#080b14'}}>
       <style>{CSS}</style>
       <StadiumBg/>
-      <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:380,textAlign:'center'}}>
-        <div style={{fontSize:56,animation:'floatBob 3s ease-in-out infinite',marginBottom:20}}>⚽</div>
-        <h1 style={{color:'#fff',fontSize:32,fontWeight:900,fontFamily:'Impact,"Arial Narrow Bold",sans-serif',letterSpacing:2,textTransform:'uppercase',marginBottom:4,textShadow:'0 0 40px rgba(0,230,118,0.25)'}}>
-          PENALTY <span style={{color:'#00e676'}}>SHOWDOWN</span>
+      <div className="relative z-10 w-full max-w-sm text-center">
+        <div className="mb-4" style={{animation:'floatBob 3s ease-in-out infinite'}}>
+          <img src="/daf-logo.png" style={{height:88,objectFit:'contain',filter:'drop-shadow(0 0 24px rgba(201,162,39,0.45))'}} alt="DAF World Cup 2026"/>
+        </div>
+        <h1 className="text-3xl font-black uppercase tracking-widest mb-1" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',textShadow:'0 0 40px rgba(201,162,39,0.35)'}}>
+          DAF <span style={{color:'#C9A227'}}>WORLD CUP</span>
         </h1>
-        <div style={{color:'rgba(255,255,255,0.3)',fontSize:11,letterSpacing:4,textTransform:'uppercase',marginBottom:32}}>
-          Office Championship 2025
-        </div>
-        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:18,padding:28}}>
-          {noTournament && (
-            <div style={{color:'rgba(255,255,255,0.35)',fontSize:11,marginBottom:20,lineHeight:1.5}}>
-              No tournament running yet — enter your name to create one
+        <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground mb-8">2026</p>
+
+        <Card className="bg-transparent border-border/40 text-left">
+          <CardContent className="pt-6 flex flex-col gap-4">
+            {noTournament && (
+              <p className="text-xs text-muted-foreground leading-relaxed text-center">
+                No tournament running yet — enter your name to create one
+              </p>
+            )}
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] tracking-[0.2em] uppercase font-bold text-muted-foreground">Your Name</label>
+              <Input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                placeholder="Enter your name..."
+                autoFocus
+              />
             </div>
-          )}
-          <div style={{marginBottom:18,textAlign:'left'}}>
-            <label style={{display:'block',color:'rgba(255,255,255,0.45)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>
-              Your Name
-            </label>
-            <input
-              value={name} onChange={e=>setName(e.target.value)}
-              onKeyDown={e=>e.key==='Enter'&&handleSubmit()}
-              placeholder="Enter your name..."
-              autoFocus
-              style={{width:'100%',padding:'13px 15px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:10,color:'#fff',fontSize:15,outline:'none'}}
-              onFocus={e=>e.target.style.borderColor='#00e676'}
-              onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.12)'}
-            />
-          </div>
-          {err && <div style={{color:'#ff1744',fontSize:11,marginBottom:10}}>{err}</div>}
-          <button onClick={handleSubmit} disabled={busy} className="prim-btn" style={{width:'100%',padding:'14px',fontSize:13}}>
-            {busy ? '…' : noTournament ? '🏟️ Create Tournament' : '⚽ Join Tournament'}
-          </button>
-        </div>
-        <div style={{color:'rgba(255,255,255,0.18)',fontSize:10,marginTop:20,letterSpacing:1}}>
-          {noTournament ? '48 slots · you\'ll be assigned a bracket code' : 'You\'ll be assigned a random slot in the bracket'}
-        </div>
+            {err && <p className="text-destructive text-xs">{err}</p>}
+            <Button className="w-full" size="lg" disabled={busy} onClick={handleSubmit}>
+              {busy ? '…' : noTournament ? '🏟️ Create Tournament' : '⚽ Join Tournament'}
+            </Button>
+            <div className="flex items-center gap-3">
+              <Separator className="flex-1"/>
+              <span className="text-[10px] tracking-widest text-muted-foreground">OR</span>
+              <Separator className="flex-1"/>
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full"
+              size="lg"
+              onClick={() => {
+                const n = name.trim();
+                if (!n) { setErr('Enter your name first'); return; }
+                localStorage.setItem('psc_name', n);
+                onCPU(n);
+              }}
+            >
+              🤖 Play Solo vs CPU
+            </Button>
+          </CardContent>
+        </Card>
+
+        <p className="text-[10px] text-muted-foreground mt-5 tracking-wide">
+          {noTournament ? "48 slots · you'll be assigned a bracket code" : "You'll be assigned a random slot in the bracket"}
+        </p>
       </div>
     </div>
   );
@@ -644,13 +715,19 @@ function RealtimeMatchScreen({ am, myCode }) {
       {/* Main area */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', position:'relative', zIndex:1, overflow:'hidden' }}>
 
-        {/* GOAL / SAVED overlay */}
+        <PenaltyOverlay
+          phase={localPhase}
+          shotZone={kr?.shotZone}
+          saveZone={kr?.saveZone}
+          isGoal={kr?.isGoal}
+          picking={am.phase === 'picking' && !iHaveSubmitted}
+          myZone={myZone}
+          onPick={submitZone}
+        />
+
+        {/* GOAL / SAVED stamp */}
         {showReveal && (
-          <div style={{
-            position:'absolute', inset:0, zIndex:20,
-            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-            pointerEvents:'none',
-          }}>
+          <div style={{position:'absolute',inset:0,zIndex:20,pointerEvents:'none'}}>
             <div style={{
               position:'absolute', left:'50%', top:'42%',
               fontSize:58, fontWeight:900,
@@ -718,14 +795,14 @@ function RealtimeMatchScreen({ am, myCode }) {
           </div>
         )}
 
-        <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'10px 16px 6px', gap:10 }}>
-
-          {/* Role pill */}
+        {/* Role pill + hint — pinned to bottom of main area */}
+        <div style={{position:'absolute',bottom:16,left:0,right:0,zIndex:15,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
           <div style={{
             display:'flex', alignItems:'center', gap:8,
-            background: iAmShooter ? 'rgba(0,230,118,0.1)' : 'rgba(64,196,255,0.1)',
-            border: `1px solid ${iAmShooter ? 'rgba(0,230,118,0.35)' : 'rgba(64,196,255,0.35)'}`,
-            borderRadius:20, padding:'5px 14px',
+            background: iAmShooter ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.55)',
+            border: `1px solid ${iAmShooter ? 'rgba(0,230,118,0.5)' : 'rgba(64,196,255,0.5)'}`,
+            borderRadius:20, padding:'6px 16px',
+            backdropFilter:'blur(8px)',
           }}>
             <span style={{fontSize:14}}>{iAmShooter ? '⚽' : '🧤'}</span>
             <span style={{
@@ -744,48 +821,10 @@ function RealtimeMatchScreen({ am, myCode }) {
             )}
             {am.isSuddenDeath && <span style={{color:'#ffd700',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>⚡SD</span>}
           </div>
-
-          <GoalVisual
-            phase={localPhase}
-            shotZone={kr?.shotZone}
-            saveZone={kr?.saveZone}
-            isGoal={kr?.isGoal}
-          />
-        </div>
-
-        {/* Zone picker */}
-        <div style={{ padding:'0 16px 14px' }}>
-          <div style={{
-            color:'rgba(255,255,255,0.3)', fontSize:9, letterSpacing:2.5,
-            textTransform:'uppercase', textAlign:'center', marginBottom:7, minHeight:14,
-          }}>
+          <div style={{color:'rgba(255,255,255,0.5)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',textAlign:'center',minHeight:14,textShadow:'0 1px 4px rgba(0,0,0,0.9)'}}>
             {am.phase === 'picking' && !iHaveSubmitted
-              ? (iAmShooter ? 'Choose shot direction' : 'Choose dive direction')
-              : am.phase === 'picking' && iHaveSubmitted
-              ? ''
+              ? (iAmShooter ? 'Tap to aim your shot' : 'Tap to choose dive direction')
               : localPhase === 'animating' ? '⚡ Resolving...' : ''}
-          </div>
-          <div style={{ display:'grid', gridTemplate:'repeat(2, 50px) / repeat(3, 1fr)', gap:5 }}>
-            {ZONES.map(z => {
-              let cls = 'zone-btn';
-              const isPicking = am.phase === 'picking' && !iHaveSubmitted;
-              if (isPicking) {
-                if (myZone === z) cls += ' selected';
-              } else if (showReveal) {
-                if (z === kr?.shotZone) cls += isGoal ? ' reveal-shot-goal' : ' reveal-shot-saved';
-                else if (z === kr?.saveZone && !isGoal) cls += ' reveal-save';
-                else cls += ' reveal-none';
-              }
-              return (
-                <button key={z} className={cls}
-                  onClick={() => submitZone(z)}
-                  disabled={!isPicking || !!myZone}
-                  style={{ opacity: isPicking && myZone && myZone !== z ? 0.45 : 1 }}>
-                  <span style={{fontSize:15}}>{ZONE_ICONS[z]}</span>
-                  <span style={{fontSize:8.5,letterSpacing:0.5,fontWeight:700}}>{z.toUpperCase()}</span>
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>
@@ -862,8 +901,14 @@ function SpectatorMatchView({ am }) {
       </div>
 
       <div style={{ flex:1, display:'flex', flexDirection:'column', position:'relative', zIndex:1 }}>
+        <PenaltyOverlay
+          phase={localPhase}
+          shotZone={kr?.shotZone}
+          saveZone={kr?.saveZone}
+          isGoal={kr?.isGoal}
+        />
         {localPhase === 'result' && (
-          <div style={{ position:'absolute', inset:0, zIndex:20, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+          <div style={{ position:'absolute', inset:0, zIndex:20, pointerEvents:'none' }}>
             <div style={{
               position:'absolute', left:'50%', top:'42%',
               fontSize:58, fontWeight:900,
@@ -874,13 +919,12 @@ function SpectatorMatchView({ am }) {
             }}>{kr?.isGoal ? 'GOAL!' : 'SAVED!'}</div>
           </div>
         )}
-        <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ color:'rgba(255,255,255,0.3)', fontSize:9, letterSpacing:3, textTransform:'uppercase', marginBottom:12 }}>
+        <div style={{position:'absolute',bottom:16,left:0,right:0,zIndex:15,display:'flex',justifyContent:'center'}}>
+          <div style={{ color:'rgba(255,255,255,0.5)', fontSize:9, letterSpacing:3, textTransform:'uppercase',textShadow:'0 1px 4px rgba(0,0,0,0.9)' }}>
             {am.phase === 'picking'
               ? `${am.choicesSubmitted.p1 ? '✓' : '○'} ${am.p1.name.split(' ')[0]}  ·  ${am.choicesSubmitted.p2 ? '✓' : '○'} ${am.p2.name.split(' ')[0]}`
               : ''}
           </div>
-          <GoalVisual phase={localPhase} shotZone={kr?.shotZone} saveZone={kr?.saveZone} isGoal={kr?.isGoal}/>
         </div>
       </div>
     </div>
@@ -1006,6 +1050,290 @@ function BracketTree({ bracket, activeMatch, onMatchClick }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// CPU TOURNAMENT MODE
+// ═══════════════════════════════════════════════════════════════
+
+const CPU_ROUNDS = ['Round of 16', 'Quarter-Final', 'Semi-Final', 'Final'];
+
+function CPUMatchScreen({ playerName, roundLabel, onDone }) {
+  const [kicks, setKicks]   = useState([]);
+  const [phase, setPhase]   = useState('picking');
+  const [myZone, setMyZone] = useState(null);
+  const [kr, setKr]         = useState(null);
+  const [winner, setWinner] = useState(null);
+  const [sd, setSd]         = useState(false);
+  const busyRef             = useRef(false);
+  const kicksRef            = useRef([]);
+  const sdRef               = useRef(false);
+
+  const kickNum    = kicksRef.current.length + 1;
+  const iAmShooter = kickNum % 2 === 1;
+
+  const p1Score         = kicks.filter((k, i) => i % 2 === 0 && k.isGoal).length;
+  const p2Score         = kicks.filter((k, i) => i % 2 !== 0 && k.isGoal).length;
+  const playerShotKicks = kicks.filter((_, i) => i % 2 === 0);
+  const cpuShotKicks    = kicks.filter((_, i) => i % 2 !== 0);
+
+  const handlePick = async (zone) => {
+    if (busyRef.current || phase !== 'picking') return;
+    busyRef.current = true;
+    setMyZone(zone);
+    setKr(null);
+    setPhase('animating');
+
+    await new Promise(r => setTimeout(r, 600));
+    const cpuZone = rz();
+    const kn = kicksRef.current.length + 1;
+    const playerShootsNow = kn % 2 === 1;
+    const shotZone = playerShootsNow ? zone : cpuZone;
+    const saveZone = playerShootsNow ? cpuZone : zone;
+    const isGoal   = shotZone !== saveZone;
+    const scorer   = isGoal ? (playerShootsNow ? 'player' : 'cpu') : null;
+    const result   = { shotZone, saveZone, isGoal, scorer };
+
+    const newKicks = [...kicksRef.current, result];
+    kicksRef.current = newKicks;
+    setKicks(newKicks);
+    setKr(result);
+
+    await new Promise(r => setTimeout(r, 750));
+    setPhase('result');
+
+    const np1 = newKicks.filter((k, i) => i % 2 === 0 && k.isGoal).length;
+    const np2 = newKicks.filter((k, i) => i % 2 !== 0 && k.isGoal).length;
+
+    await new Promise(r => setTimeout(r, 1800));
+
+    const total = newKicks.length;
+    if (!sdRef.current) {
+      if (total >= TOTAL_KICKS) {
+        if (np1 !== np2) {
+          setWinner(np1 > np2 ? 'player' : 'cpu');
+          setPhase('done');
+          busyRef.current = false;
+          return;
+        }
+        sdRef.current = true;
+        setSd(true);
+      }
+    } else {
+      const sdCount = total - TOTAL_KICKS;
+      if (sdCount % 2 === 0 && np1 !== np2) {
+        setWinner(np1 > np2 ? 'player' : 'cpu');
+        setPhase('done');
+        busyRef.current = false;
+        return;
+      }
+    }
+
+    setMyZone(null);
+    setPhase('picking');
+    busyRef.current = false;
+  };
+
+  const showReveal = phase === 'result';
+  const isGoalNow  = kr?.isGoal;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%',background:'#080b14',fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",position:'relative',overflow:'hidden'}}>
+      <PitchBg pulse={showReveal && isGoalNow}/>
+
+      <div style={{background:'rgba(0,0,0,0.65)',backdropFilter:'blur(12px)',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'10px 16px',position:'relative',zIndex:10}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{flex:1}}>
+            <div style={{color:'rgba(255,255,255,0.4)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginBottom:2}}>{roundLabel}</div>
+            <div style={{color:'#fff',fontSize:12,fontWeight:700}}>{playerName}</div>
+          </div>
+          <div style={{textAlign:'center',padding:'0 12px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <div key={p1Score} style={{fontSize:36,fontWeight:900,color:'#fff',minWidth:36,textAlign:'center',fontFamily:'Impact,"Arial Narrow Bold",sans-serif',lineHeight:1,animation:'scorePopIn 0.35s ease'}}>{p1Score}</div>
+              <div style={{color:'rgba(255,255,255,0.25)',fontSize:20,fontWeight:200}}>:</div>
+              <div key={p2Score+100} style={{fontSize:36,fontWeight:900,color:'#fff',minWidth:36,textAlign:'center',fontFamily:'Impact,"Arial Narrow Bold",sans-serif',lineHeight:1,animation:'scorePopIn 0.35s ease'}}>{p2Score}</div>
+            </div>
+            <div style={{color:'rgba(255,255,255,0.28)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginTop:1}}>
+              {sd ? '⚡ SD' : `Kick ${Math.min(kickNum, TOTAL_KICKS)}/${TOTAL_KICKS}`}
+            </div>
+          </div>
+          <div style={{flex:1,textAlign:'right'}}>
+            <div style={{color:'rgba(255,255,255,0.4)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginBottom:2}}>vs</div>
+            <div style={{color:'#ff6b35',fontSize:12,fontWeight:700}}>CPU</div>
+          </div>
+        </div>
+        <div style={{display:'flex',justifyContent:'center',gap:3,marginTop:8}}>
+          {Array.from({length:Math.ceil(TOTAL_KICKS/2)},(_,i)=>{
+            const pk=playerShotKicks[i]; const ck=cpuShotKicks[i];
+            return (
+              <div key={i} style={{display:'flex',flexDirection:'column',gap:2,alignItems:'center'}}>
+                <div style={{width:10,height:10,borderRadius:'50%',background:!pk?'rgba(255,255,255,0.08)':pk.isGoal?'#00e676':'rgba(255,255,255,0.25)',border:`1px solid ${!pk?'rgba(255,255,255,0.15)':pk.isGoal?'#00e676':'rgba(255,255,255,0.4)'}`,transition:'all 0.3s'}}/>
+                <div style={{width:10,height:10,borderRadius:'50%',background:!ck?'rgba(255,255,255,0.08)':ck.isGoal?'#ff1744':'rgba(255,255,255,0.25)',border:`1px solid ${!ck?'rgba(255,255,255,0.15)':ck.isGoal?'#ff1744':'rgba(255,255,255,0.4)'}`,transition:'all 0.3s'}}/>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{flex:1,display:'flex',flexDirection:'column',position:'relative',zIndex:1,overflow:'hidden'}}>
+        <PenaltyOverlay
+          phase={phase}
+          shotZone={kr?.shotZone}
+          saveZone={kr?.saveZone}
+          isGoal={kr?.isGoal}
+          picking={phase === 'picking'}
+          myZone={myZone}
+          onPick={handlePick}
+        />
+
+        {showReveal && (
+          <div style={{position:'absolute',inset:0,zIndex:20,pointerEvents:'none'}}>
+            <div style={{position:'absolute',left:'50%',top:'42%',fontSize:58,fontWeight:900,fontFamily:'Impact,"Arial Narrow Bold",sans-serif',letterSpacing:1,textTransform:'uppercase',color:isGoalNow?'#00e676':'#ff1744',textShadow:isGoalNow?'0 0 60px rgba(0,230,118,0.9),0 0 120px rgba(0,230,118,0.4)':'0 0 60px rgba(255,23,68,0.9)',animation:'stampIn 0.42s cubic-bezier(0.2,0,0.2,1) forwards'}}>
+              {isGoalNow ? 'GOAL!' : 'SAVED!'}
+            </div>
+            <div style={{position:'absolute',left:'50%',top:'62%',transform:'translateX(-50%)',color:'rgba(255,255,255,0.65)',fontSize:12,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center',animation:'fadeSlideUp 0.5s 0.25s ease both'}}>
+              {isGoalNow ? `🔥 ${kr.scorer==='player' ? playerName.split(' ')[0] : 'CPU'} scored!` : '🧤 Saved!'}
+            </div>
+          </div>
+        )}
+
+        {phase === 'done' && (
+          <div style={{position:'absolute',inset:0,zIndex:25,background:'rgba(0,0,0,0.78)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',animation:'scaleIn 0.5s ease'}}>
+            <div style={{fontSize:52,fontWeight:900,fontFamily:'Impact,sans-serif',textTransform:'uppercase',letterSpacing:1,color:winner==='player'?'#ffd700':'#ff6b35',textShadow:winner==='player'?'0 0 50px rgba(255,215,0,0.6)':'none'}}>
+              {winner === 'player' ? '🏆 You Win!' : '💀 You Lose'}
+            </div>
+            <div style={{color:'rgba(255,255,255,0.5)',fontSize:18,marginTop:8}}>{p1Score} – {p2Score}</div>
+            <Button onClick={() => onDone(winner === 'player')} size="lg" style={{marginTop:24}}>Continue →</Button>
+          </div>
+        )}
+
+        {/* Role pill + hint pinned to bottom */}
+        <div style={{position:'absolute',bottom:16,left:0,right:0,zIndex:15,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.55)',border:`1px solid ${iAmShooter?'rgba(0,230,118,0.5)':'rgba(64,196,255,0.5)'}`,borderRadius:20,padding:'6px 16px',backdropFilter:'blur(8px)'}}>
+            <span style={{fontSize:14}}>{iAmShooter ? '⚽' : '🧤'}</span>
+            <span style={{color:iAmShooter?'#00e676':'#40c4ff',fontSize:10,fontWeight:800,letterSpacing:2.5,textTransform:'uppercase'}}>
+              {playerName.split(' ')[0]} — {iAmShooter ? 'SHOOT' : 'SAVE'}
+            </span>
+            {sd && <span style={{color:'#ffd700',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>⚡SD</span>}
+          </div>
+          <div style={{color:'rgba(255,255,255,0.5)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',textAlign:'center',minHeight:14,textShadow:'0 1px 4px rgba(0,0,0,0.9)'}}>
+            {phase === 'picking' ? (iAmShooter ? 'Tap to aim your shot' : 'Tap to choose dive direction') : phase === 'animating' ? '⚡ Resolving...' : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function CPUBracketScreen({ playerName, onExit }) {
+  const [roundIdx, setRoundIdx] = useState(0);
+  const [inMatch, setInMatch]   = useState(false);
+  const [results, setResults]   = useState([]);
+  const [done, setDone]         = useState(null);
+
+  const handleMatchDone = (won) => {
+    const newResults = [...results, won ? 'win' : 'loss'];
+    setResults(newResults);
+    setInMatch(false);
+    if (!won) {
+      setDone('eliminated');
+    } else if (roundIdx === CPU_ROUNDS.length - 1) {
+      setDone('champion');
+    } else {
+      setRoundIdx(prev => prev + 1);
+    }
+  };
+
+  if (inMatch) {
+    return (
+      <CPUMatchScreen
+        playerName={playerName}
+        roundLabel={CPU_ROUNDS[roundIdx]}
+        onDone={handleMatchDone}
+      />
+    );
+  }
+
+  if (done === 'champion') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center relative overflow-hidden text-center p-10" style={{background:'#080b14'}}>
+        <StadiumBg/>
+        <Confetti/>
+        <div className="relative z-10 flex flex-col items-center gap-3">
+          <div className="text-7xl" style={{animation:'floatBob 2s ease-in-out infinite'}}>🏆</div>
+          <div className="text-5xl font-black uppercase tracking-widest" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',color:'#ffd700',textShadow:'0 0 60px rgba(255,215,0,0.6)',animation:'scaleIn 0.5s ease'}}>CHAMPION!</div>
+          <div className="text-xl font-bold text-foreground">{playerName}</div>
+          <Badge variant="warning" className="text-xs tracking-widest uppercase">Beat all {CPU_ROUNDS.length} CPU rounds</Badge>
+          <Button variant="secondary" className="mt-6" onClick={onExit}>← Back to Menu</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (done === 'eliminated') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center relative overflow-hidden text-center p-10" style={{background:'#080b14'}}>
+        <StadiumBg/>
+        <div className="relative z-10 flex flex-col items-center gap-3">
+          <div className="text-6xl">💀</div>
+          <div className="text-4xl font-black uppercase tracking-widest" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',color:'#ff6b35'}}>ELIMINATED</div>
+          <p className="text-muted-foreground text-sm">You reached the {CPU_ROUNDS[roundIdx]}</p>
+          <p className="text-muted-foreground text-xs tracking-wide">
+            Won {results.filter(r => r === 'win').length} of {results.length} round{results.length !== 1 ? 's' : ''}
+          </p>
+          <div className="flex gap-3 mt-6">
+            <Button variant="secondary" onClick={onExit}>← Menu</Button>
+            <Button onClick={() => { setRoundIdx(0); setInMatch(false); setResults([]); setDone(null); }}>🔄 Try Again</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col relative overflow-hidden" style={{background:'#080b14'}}>
+      <StadiumBg/>
+      <div className="flex items-center gap-3 px-4 py-3 relative z-10" style={{background:'rgba(0,0,0,0.55)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <Button variant="ghost" size="icon" onClick={onExit} className="text-muted-foreground text-lg">←</Button>
+        <div>
+          <div className="text-[10px] tracking-[0.25em] uppercase font-bold text-yellow-400">🤖 Solo vs CPU</div>
+          <div className="text-muted-foreground text-[10px] mt-0.5">DAF World Cup 2026</div>
+        </div>
+        <span className="ml-auto text-sm font-semibold text-foreground/70">{playerName}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-5 relative z-10">
+        <div className="max-w-sm mx-auto flex flex-col gap-3">
+          {CPU_ROUNDS.map((label, i) => {
+            const isNext = i === roundIdx;
+            const res = results[i];
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-xl px-4 py-3 transition-all" style={{
+                background: isNext ? 'rgba(0,230,118,0.07)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isNext ? 'rgba(0,230,118,0.3)' : res ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.05)'}`,
+                opacity: !res && !isNext ? 0.35 : 1,
+              }}>
+                <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-black" style={{
+                  background: res==='win'?'rgba(0,230,118,0.15)':res==='loss'?'rgba(255,23,68,0.15)':isNext?'rgba(0,230,118,0.1)':'rgba(255,255,255,0.04)',
+                  border:`1.5px solid ${res==='win'?'#00e676':res==='loss'?'#ff1744':isNext?'rgba(0,230,118,0.4)':'rgba(255,255,255,0.1)'}`,
+                  color: res==='win'?'#00e676':res==='loss'?'#ff1744':isNext?'#00e676':'rgba(255,255,255,0.4)',
+                }}>
+                  {res === 'win' ? '✓' : res === 'loss' ? '✗' : isNext ? '▶' : `${i+1}`}
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-bold" style={{color:isNext?'#00e676':res==='win'?'#00e676':res==='loss'?'#ff4444':'rgba(255,255,255,0.5)'}}>{label}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    {res === 'win' ? 'Won ✓' : res === 'loss' ? 'Lost ✗' : isNext ? 'Up next' : 'Locked'}
+                  </div>
+                </div>
+                {isNext && <Button size="sm" onClick={() => setInMatch(true)}>Play</Button>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TOURNAMENT SCREEN
 // ═══════════════════════════════════════════════════════════════
 
@@ -1027,55 +1355,57 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
   const openMatch = (match) => { setErr(''); setPendingMatch(match); };
 
   return (
-    <div style={{height:'100%',display:'flex',flexDirection:'column',background:'#080b14',fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",position:'relative',overflow:'hidden'}}>
+    <div className="h-full flex flex-col relative overflow-hidden" style={{background:'#080b14'}}>
       <StadiumBg/>
-      <div style={{padding:'13px 18px',background:'rgba(0,0,0,0.55)',borderBottom:'1px solid rgba(255,255,255,0.07)',display:'flex',alignItems:'center',gap:12,position:'relative',zIndex:1}}>
-        <button onClick={onBack} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:18,cursor:'pointer'}}>←</button>
+      <div className="flex items-center gap-3 px-4 py-3 relative z-10" style={{background:'rgba(0,0,0,0.55)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground text-lg">←</Button>
         <div>
-          <div style={{color:'#ffd700',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',fontWeight:700}}>🏆 Tournament Bracket</div>
-          <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,marginTop:2}}>
-            {myCode&&<span style={{fontFamily:'monospace',color:'#00e676',marginRight:6}}>{myCode}</span>}
-            48-Player Championship
+          <div className="text-[10px] tracking-[0.25em] uppercase font-bold text-yellow-400">🏆 Tournament Bracket</div>
+          <div className="text-muted-foreground text-[10px] mt-0.5">
+            {myCode && <span className="font-mono text-primary mr-1.5">{myCode}</span>}
+            DAF World Cup 2026
           </div>
         </div>
-        <div style={{marginLeft:'auto'}}>
-          <span style={{background:'rgba(255,215,0,0.1)',border:'1px solid rgba(255,215,0,0.28)',color:'#ffd700',padding:'3px 10px',borderRadius:6,fontSize:9,fontWeight:800,letterSpacing:2,textTransform:'uppercase'}}>{stageLabel}</span>
+        <div className="ml-auto">
+          <Badge variant="warning" className="text-[9px] tracking-widest uppercase">{stageLabel}</Badge>
         </div>
       </div>
 
       <BracketTree bracket={bracket} activeMatch={activeMatch} onMatchClick={openMatch}/>
 
-      {pendingMatch&&(
-        <div style={{position:'absolute',inset:0,zIndex:40,background:'rgba(0,0,0,0.93)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
-          <div style={{width:'100%',maxWidth:320,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:16,padding:24}}>
-            <div style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',marginBottom:20,textAlign:'center'}}>
-              {pendingMatch.id.replace(/_/g,' ').toUpperCase()}
-            </div>
-            {[
-              {slot:pendingMatch.p1,color:'#00e676',label:'Player 1'},
-              {slot:pendingMatch.p2,color:'#ff6b35',label:'Player 2'},
-            ].map(({slot,color,label})=>(
-              <div key={label} style={{marginBottom:14,padding:'10px 12px',background:'rgba(255,255,255,0.04)',borderRadius:10,border:`1px solid ${slot?.name?color+'44':'rgba(255,255,255,0.08)'}`}}>
-                <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <div style={{fontFamily:'monospace',fontSize:11,fontWeight:800,color,letterSpacing:2,background:`${color}15`,padding:'2px 8px',borderRadius:4}}>{slot?.code}</div>
-                  <div style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:1.5,textTransform:'uppercase'}}>{label}</div>
+      {pendingMatch && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center p-6" style={{background:'rgba(0,0,0,0.93)'}}>
+          <Card className="w-full max-w-xs">
+            <CardContent className="pt-6 flex flex-col gap-4">
+              <p className="text-center text-[9px] tracking-[0.2em] uppercase text-muted-foreground">
+                {pendingMatch.id.replace(/_/g,' ').toUpperCase()}
+              </p>
+              {[
+                {slot:pendingMatch.p1, color:'#00e676', label:'Player 1'},
+                {slot:pendingMatch.p2, color:'#ff6b35', label:'Player 2'},
+              ].map(({slot,color,label}) => (
+                <div key={label} className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${slot?.name ? color+'44' : 'rgba(255,255,255,0.08)'}`}}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-mono text-[11px] font-black tracking-widest px-2 py-0.5 rounded" style={{color,background:`${color}18`}}>{slot?.code}</span>
+                    <span className="text-[9px] tracking-widest uppercase text-muted-foreground">{label}</span>
+                  </div>
+                  <div className="text-sm" style={{color:slot?.name?'#fff':'rgba(255,255,255,0.35)',fontWeight:slot?.name?600:400}}>
+                    {slot?.name || <em className="text-[11px]">Not registered yet</em>}
+                  </div>
                 </div>
-                <div style={{marginTop:6,color:slot?.name?'#fff':'rgba(255,255,255,0.3)',fontSize:13,fontWeight:slot?.name?600:400}}>
-                  {slot?.name||<span style={{fontStyle:'italic',fontSize:11}}>Not registered yet</span>}
-                </div>
+              ))}
+              {err && <p className="text-destructive text-xs text-center">{err}</p>}
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={() => { setPendingMatch(null); setErr(''); }}>Cancel</Button>
+                <Button className="flex-[2]" disabled={busy || !pendingMatch.p1?.name || !pendingMatch.p2?.name} onClick={handleKickOff}>
+                  {busy ? '…' : '⚽ Kick Off'}
+                </Button>
               </div>
-            ))}
-            {err&&<div style={{color:'#ff1744',fontSize:11,marginBottom:10,textAlign:'center'}}>{err}</div>}
-            <div style={{display:'flex',gap:10}}>
-              <button onClick={()=>{setPendingMatch(null);setErr('');}} className="sec-btn" style={{flex:1,padding:'11px'}}>Cancel</button>
-              <button onClick={handleKickOff} disabled={busy||!pendingMatch.p1?.name||!pendingMatch.p2?.name} className="prim-btn" style={{flex:2,padding:'11px'}}>
-                {busy?'…':'⚽ Kick Off'}
-              </button>
-            </div>
-            {(!pendingMatch.p1?.name||!pendingMatch.p2?.name)&&(
-              <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,textAlign:'center',marginTop:10}}>Both players need to register first</div>
-            )}
-          </div>
+              {(!pendingMatch.p1?.name || !pendingMatch.p2?.name) && (
+                <p className="text-muted-foreground text-[10px] text-center">Both players need to register first</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
@@ -1088,39 +1418,15 @@ function TournamentScreen({ bracket, activeMatch, myCode, onBack }) {
 
 function ChampionScreen({ name, onBack }) {
   return (
-    <div style={{
-      height:'100%', display:'flex', flexDirection:'column',
-      background:'#080b14', fontFamily:"'Trebuchet MS','Gill Sans',Calibri,sans-serif",
-      alignItems:'center', justifyContent:'center',
-      position:'relative', overflow:'hidden',
-    }}>
+    <div className="h-full flex flex-col items-center justify-center relative overflow-hidden text-center p-7" style={{background:'#080b14'}}>
       <StadiumBg pulse/>
       <Confetti/>
-      <div style={{position:'relative',zIndex:1,textAlign:'center',padding:28}}>
-        <div style={{fontSize:72,animation:'floatBob 1.5s ease-in-out infinite',marginBottom:16,
-          filter:'drop-shadow(0 0 30px rgba(255,215,0,0.6))'}}>🏆</div>
-        <div style={{color:'#ffd700',fontSize:11,letterSpacing:5,textTransform:'uppercase',fontWeight:800,marginBottom:10,
-          textShadow:'0 0 25px rgba(255,215,0,0.5)'}}>
-          Tournament Champion
-        </div>
-        <div style={{
-          fontSize:36,fontWeight:900,fontFamily:'Impact,sans-serif',
-          color:'#fff',letterSpacing:1,marginBottom:8,
-          animation:'scaleIn 0.7s ease',
-        }}>{name}</div>
-        <div style={{
-          display:'inline-block',padding:'4px 16px',borderRadius:20,marginBottom:28,
-          background:'rgba(0,230,118,0.12)',
-          border:'1px solid rgba(0,230,118,0.35)',
-          color:'#00e676',fontSize:11,fontWeight:700,
-        }}>
-          Penalty Champion 2025
-        </div>
-        <div>
-          <button onClick={onBack} className="prim-btn" style={{padding:'14px 32px',fontSize:13}}>
-            🎉 Play Again
-          </button>
-        </div>
+      <div className="relative z-10 flex flex-col items-center gap-3">
+        <div className="text-7xl" style={{animation:'floatBob 1.5s ease-in-out infinite',filter:'drop-shadow(0 0 30px rgba(255,215,0,0.6))'}}>🏆</div>
+        <p className="text-[11px] tracking-[0.4em] uppercase font-black text-yellow-400" style={{textShadow:'0 0 25px rgba(255,215,0,0.5)'}}>DAF World Cup 2026</p>
+        <div className="text-4xl font-black tracking-wide text-foreground" style={{fontFamily:'Impact,sans-serif',animation:'scaleIn 0.7s ease'}}>{name}</div>
+        <Badge variant="success" className="text-xs tracking-widest uppercase px-4 py-1">DAF World Cup 2026 Champion</Badge>
+        <Button size="lg" className="mt-6" onClick={onBack}>🎉 Play Again</Button>
       </div>
     </div>
   );
@@ -1133,7 +1439,8 @@ function ChampionScreen({ name, onBack }) {
 export default function App() {
   const [serverState, setServerState] = useState(null); // null = connecting
   const [myCode, setMyCode] = useState(() => localStorage.getItem('psc_code'));
-  const [screen, setScreen] = useState('loading'); // loading | login | tournament | champion
+  const [screen, setScreen] = useState('loading'); // loading | login | tournament | champion | cpu
+  const [cpuName, setCpuName] = useState('');
 
   // Poll server state every 1.5s
   useEffect(() => {
@@ -1163,6 +1470,11 @@ export default function App() {
   const handleJoined = (code, _name) => {
     setMyCode(code);
     setScreen('tournament');
+  };
+
+  const handleCPU = (name) => {
+    setCpuName(name);
+    setScreen('cpu');
   };
 
   const handleReset = async () => {
@@ -1196,7 +1508,16 @@ export default function App() {
 
       {screen === 'login' && serverState && (
         <div style={{height:'100%',overflowY:'auto'}}>
-          <LoginScreen serverState={serverState} onJoined={handleJoined}/>
+          <LoginScreen serverState={serverState} onJoined={handleJoined} onCPU={handleCPU}/>
+        </div>
+      )}
+
+      {screen === 'cpu' && (
+        <div style={W}>
+          <CPUBracketScreen
+            playerName={cpuName || localStorage.getItem('psc_name') || 'Player'}
+            onExit={() => setScreen('login')}
+          />
         </div>
       )}
 
