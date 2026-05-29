@@ -1500,7 +1500,7 @@ export default function App() {
         <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'#080b14',position:'relative',overflow:'hidden'}}>
           <StadiumBg/>
           <div style={{position:'relative',zIndex:1,textAlign:'center'}}>
-            <div style={{fontSize:48,animation:'floatBob 1.5s ease-in-out infinite',marginBottom:16}}>⚽</div>
+            <img src="/daf-logo.png" style={{height:96,objectFit:'contain',animation:'floatBob 1.5s ease-in-out infinite',marginBottom:16,filter:'drop-shadow(0 0 28px rgba(201,162,39,0.5))'}} alt="DAF World Cup 2026"/>
             <div style={{color:'rgba(255,255,255,0.3)',fontSize:11,letterSpacing:3,textTransform:'uppercase'}}>Connecting…</div>
           </div>
         </div>
