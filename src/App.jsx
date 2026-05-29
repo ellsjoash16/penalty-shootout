@@ -459,16 +459,16 @@ function PenaltyOverlay({ phase, shotZone, saveZone, isGoal, picking, myZone, on
 function useDraggable(setter) {
   return (e) => {
     e.preventDefault(); e.stopPropagation();
-    let last = { x: e.clientX ?? e.touches?.[0]?.clientX, y: e.clientY ?? e.touches?.[0]?.clientY };
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    let lastX = e.clientX, lastY = e.clientY;
     const onMove = (me) => {
-      const cx = me.clientX ?? me.touches?.[0]?.clientX;
-      const cy = me.clientY ?? me.touches?.[0]?.clientY;
-      setter(p => ({ ...p, x: p.x + cx - last.x, y: p.y + cy - last.y }));
-      last = { x: cx, y: cy };
+      setter(p => ({ ...p, x: p.x + me.clientX - lastX, y: p.y + me.clientY - lastY }));
+      lastX = me.clientX; lastY = me.clientY;
     };
-    const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+    const onUp = () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
   };
 }
 
@@ -485,11 +485,13 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
 
   const resizeLogo = (e) => {
     e.preventDefault(); e.stopPropagation();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
     let lastY = e.clientY;
     const onMove = (me) => { setLogo(p => ({ ...p, h: Math.max(32, p.h + me.clientY - lastY) })); lastY = me.clientY; };
-    const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+    const onUp = () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
   };
 
   const noTournament = !serverState?.bracket;
@@ -540,7 +542,7 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
           transform:`translate(${logo.x}px,${logo.y}px)`,
           cursor:'grab', userSelect:'none', touchAction:'none',
         }}>
-          <img src="/daf-logo.png" style={{height:logo.h,objectFit:'contain',filter:'drop-shadow(0 0 24px rgba(201,162,39,0.45))',display:'block'}} alt="DAF World Cup 2026"/>
+          <img src="/daf-logo.png" draggable={false} style={{height:logo.h,objectFit:'contain',filter:'drop-shadow(0 0 24px rgba(201,162,39,0.45))',display:'block',pointerEvents:'none'}} alt="DAF World Cup 2026"/>
           {/* Resize handle */}
           <div onPointerDown={resizeLogo} style={{
             position:'absolute', bottom:-5, right:-5,
