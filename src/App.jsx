@@ -456,11 +456,41 @@ function PenaltyOverlay({ phase, shotZone, saveZone, isGoal, picking, myZone, on
 // LOGIN SCREEN
 // ═══════════════════════════════════════════════════════════════
 
+function useDraggable(setter) {
+  return (e) => {
+    e.preventDefault(); e.stopPropagation();
+    let last = { x: e.clientX ?? e.touches?.[0]?.clientX, y: e.clientY ?? e.touches?.[0]?.clientY };
+    const onMove = (me) => {
+      const cx = me.clientX ?? me.touches?.[0]?.clientX;
+      const cy = me.clientY ?? me.touches?.[0]?.clientY;
+      setter(p => ({ ...p, x: p.x + cx - last.x, y: p.y + cy - last.y }));
+      last = { x: cx, y: cy };
+    };
+    const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+}
+
 function LoginScreen({ serverState, onJoined, onCPU }) {
   const [name, setName]     = useState('');
   const [err, setErr]       = useState('');
   const [busy, setBusy]     = useState(false);
   const [myCode, setMyCode] = useState(null);
+  const [logo, setLogo]     = useState({ x: 0, y: 0, h: 88 });
+  const [title, setTitle]   = useState({ x: 0, y: 0 });
+
+  const dragLogo  = useDraggable(setLogo);
+  const dragTitle = useDraggable(setTitle);
+
+  const resizeLogo = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    let lastY = e.clientY;
+    const onMove = (me) => { setLogo(p => ({ ...p, h: Math.max(32, p.h + me.clientY - lastY) })); lastY = me.clientY; };
+    const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   const noTournament = !serverState?.bracket;
 
@@ -504,13 +534,33 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
       <style>{CSS}</style>
       <StadiumBg/>
       <div className="relative z-10 w-full max-w-sm text-center">
-        <div className="mb-4" style={{animation:'floatBob 3s ease-in-out infinite'}}>
-          <img src="/daf-logo.png" style={{height:88,objectFit:'contain',filter:'drop-shadow(0 0 24px rgba(201,162,39,0.45))'}} alt="DAF World Cup 2026"/>
+        {/* Draggable logo */}
+        <div onPointerDown={dragLogo} style={{
+          display:'inline-block', position:'relative', marginBottom:16,
+          transform:`translate(${logo.x}px,${logo.y}px)`,
+          cursor:'grab', userSelect:'none', touchAction:'none',
+        }}>
+          <img src="/daf-logo.png" style={{height:logo.h,objectFit:'contain',filter:'drop-shadow(0 0 24px rgba(201,162,39,0.45))',display:'block'}} alt="DAF World Cup 2026"/>
+          {/* Resize handle */}
+          <div onPointerDown={resizeLogo} style={{
+            position:'absolute', bottom:-5, right:-5,
+            width:13, height:13, background:'#C9A227', borderRadius:3,
+            cursor:'nwse-resize', border:'2px solid rgba(0,0,0,0.6)',
+            zIndex:10,
+          }}/>
         </div>
-        <h1 className="text-3xl font-black uppercase tracking-widest mb-1" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',textShadow:'0 0 40px rgba(201,162,39,0.35)'}}>
-          DAF <span style={{color:'#C9A227'}}>WORLD CUP</span>
-        </h1>
-        <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground mb-8">2026</p>
+
+        {/* Draggable title */}
+        <div onPointerDown={dragTitle} style={{
+          display:'inline-block', position:'relative',
+          transform:`translate(${title.x}px,${title.y}px)`,
+          cursor:'grab', userSelect:'none', touchAction:'none', marginBottom:32,
+        }}>
+          <h1 className="text-3xl font-black uppercase tracking-widest mb-1" style={{fontFamily:'Impact,"Arial Narrow Bold",sans-serif',textShadow:'0 0 40px rgba(201,162,39,0.35)'}}>
+            DAF <span style={{color:'#C9A227'}}>WORLD CUP</span>
+          </h1>
+          <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground">2026</p>
+        </div>
 
         <Card className="bg-transparent border-border/40 text-left">
           <CardContent className="pt-6 flex flex-col gap-4">
