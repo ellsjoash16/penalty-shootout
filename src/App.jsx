@@ -456,19 +456,16 @@ function PenaltyOverlay({ phase, shotZone, saveZone, isGoal, picking, myZone, on
 // LOGIN SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function useDraggable(setter) {
+function makeDragHandler(setter) {
   return (e) => {
     e.preventDefault(); e.stopPropagation();
-    const el = e.currentTarget;
-    el.setPointerCapture(e.pointerId);
-    let lastX = e.clientX, lastY = e.clientY;
-    const onMove = (me) => {
-      setter(p => ({ ...p, x: p.x + me.clientX - lastX, y: p.y + me.clientY - lastY }));
-      lastX = me.clientX; lastY = me.clientY;
-    };
-    const onUp = () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); };
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', onUp);
+    const startMX = e.clientX, startMY = e.clientY;
+    let startEX = 0, startEY = 0;
+    setter(p => { startEX = p.x; startEY = p.y; return p; });
+    const onMove = (me) => setter(p => ({ ...p, x: startEX + me.clientX - startMX, y: startEY + me.clientY - startMY }));
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   };
 }
 
@@ -480,18 +477,18 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
   const [logo, setLogo]     = useState({ x: 0, y: 0, h: 88 });
   const [title, setTitle]   = useState({ x: 0, y: 0 });
 
-  const dragLogo  = useDraggable(setLogo);
-  const dragTitle = useDraggable(setTitle);
+  const dragLogo  = makeDragHandler(setLogo);
+  const dragTitle = makeDragHandler(setTitle);
 
   const resizeLogo = (e) => {
     e.preventDefault(); e.stopPropagation();
-    const el = e.currentTarget;
-    el.setPointerCapture(e.pointerId);
-    let lastY = e.clientY;
-    const onMove = (me) => { setLogo(p => ({ ...p, h: Math.max(32, p.h + me.clientY - lastY) })); lastY = me.clientY; };
-    const onUp = () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); };
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', onUp);
+    const startY = e.clientY;
+    let startH = 88;
+    setLogo(p => { startH = p.h; return p; });
+    const onMove = (me) => setLogo(p => ({ ...p, h: Math.max(32, startH + me.clientY - startY) }));
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   };
 
   const noTournament = !serverState?.bracket;
@@ -537,14 +534,14 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
       <StadiumBg/>
       <div className="relative z-10 w-full max-w-sm text-center">
         {/* Draggable logo */}
-        <div onPointerDown={dragLogo} style={{
+        <div onMouseDown={dragLogo} style={{
           display:'inline-block', position:'relative', marginBottom:16,
           transform:`translate(${logo.x}px,${logo.y}px)`,
           cursor:'grab', userSelect:'none', touchAction:'none',
         }}>
           <img src="/daf-logo.png" draggable={false} style={{height:logo.h,objectFit:'contain',filter:'drop-shadow(0 0 24px rgba(201,162,39,0.45))',display:'block',pointerEvents:'none'}} alt="DAF World Cup 2026"/>
           {/* Resize handle */}
-          <div onPointerDown={resizeLogo} style={{
+          <div onMouseDown={resizeLogo} style={{
             position:'absolute', bottom:-5, right:-5,
             width:13, height:13, background:'#C9A227', borderRadius:3,
             cursor:'nwse-resize', border:'2px solid rgba(0,0,0,0.6)',
@@ -553,7 +550,7 @@ function LoginScreen({ serverState, onJoined, onCPU }) {
         </div>
 
         {/* Draggable title */}
-        <div onPointerDown={dragTitle} style={{
+        <div onMouseDown={dragTitle} style={{
           display:'inline-block', position:'relative',
           transform:`translate(${title.x}px,${title.y}px)`,
           cursor:'grab', userSelect:'none', touchAction:'none', marginBottom:32,
