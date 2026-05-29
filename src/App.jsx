@@ -163,112 +163,18 @@ const CSS = `
 // ═══════════════════════════════════════════════════════════════
 
 function StadiumBg({ pulse }) {
-  const J = ['#e74c3c','#c0392b','#3498db','#2980b9','#f39c12','#f1c40f','#27ae60','#2ecc71','#9b59b6','#8e44ad','#e91e63','#ff5722','#00bcd4','#ff9800','#8bc34a','#1abc9c','#d35400','#e67e22'];
-  const S = ['#fdbcb4','#f1c27d','#c68642','#8d5524','#e8b89a','#ffecd2'];
   return (
-    <div style={{position:'absolute',inset:0,zIndex:0,overflow:'hidden'}}>
-
-      {/* goal flash */}
-      <div style={{position:'absolute',inset:0,zIndex:9,pointerEvents:'none',animation:pulse?'goalFlashBg 0.8s ease':'none'}}/>
-
-      {/* ── CROWD ── */}
-      <div style={{position:'absolute',top:0,left:0,right:0,height:'23%',overflow:'hidden',background:'#8c6820'}}>
-        <svg width="100%" height="100%" viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" style={{display:'block'}}>
-          <rect width="400" height="110" fill="#9c7828"/>
-          {/* 4 rows: front row at bottom, back row at top */}
-          {[92,68,44,20].map((rowY,ri)=>
-            Array.from({length:20},(_,ci)=>{
-              const x = ci*20+(ri%2)*10;
-              const j = J[(ri*7+ci*3)%J.length];
-              const sk = S[(ri*3+ci*2)%S.length];
-              return (
-                <g key={`${ri}-${ci}`}>
-                  {/* jersey body */}
-                  <rect x={x+1} y={rowY-10} width="18" height="16" rx="3" fill={j}/>
-                  {/* shoulders wider at top */}
-                  <rect x={x} y={rowY-12} width="20" height="5" rx="3" fill={j}/>
-                  {/* neck */}
-                  <rect x={x+7} y={rowY-15} width="6" height="6" rx="1" fill={sk}/>
-                  {/* head */}
-                  <circle cx={x+10} cy={rowY-22} r="9" fill={sk}/>
-                  {/* hair (jersey colour on top of head) */}
-                  <ellipse cx={x+10} cy={rowY-29} rx="9" ry="5" fill={j} opacity="0.9"/>
-                </g>
-              );
-            })
-          )}
-          {/* top dark rim */}
-          <rect width="400" height="18" fill="rgba(0,0,0,0.45)"/>
-          {/* bottom fade into hoardings */}
-          <rect y="72" width="400" height="38" fill="rgba(0,0,0,0.6)"/>
-        </svg>
-      </div>
-
-      {/* ── HOARDINGS (left & right boards) ── */}
-      <div style={{position:'absolute',top:'23%',left:0,right:0,height:'10%',display:'flex',alignItems:'stretch'}}>
-        {/* left board */}
-        <div style={{flex:'0 0 30%',background:'#6b0d2f',borderTop:'3px solid #40081c',borderBottom:'3px solid #40081c',
-          display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'0 6px'}}>
-          <div style={{width:'clamp(15px,3.5vw,21px)',height:'clamp(15px,3.5vw,21px)',
-            border:'1.5px solid rgba(255,255,255,0.8)',borderRadius:'50%',background:'rgba(255,255,255,0.12)',
-            display:'flex',alignItems:'center',justifyContent:'center',fontSize:'clamp(6px,1.8vw,11px)'}}>⚽</div>
-          <div style={{lineHeight:1.2}}>
-            <div style={{color:'#fff',fontWeight:900,letterSpacing:'0.08em',fontFamily:'"Arial Black",Arial,sans-serif',fontSize:'clamp(5px,1.4vw,9px)',whiteSpace:'nowrap'}}>PENALTY</div>
-            <div style={{color:'rgba(255,255,255,0.55)',fontWeight:600,letterSpacing:'0.18em',fontFamily:'Arial,sans-serif',fontSize:'clamp(4px,0.9vw,7px)',whiteSpace:'nowrap'}}>SHOWDOWN</div>
-          </div>
-        </div>
-        {/* centre backing (dark gap where goal sits) */}
-        <div style={{flex:1,background:'#080808'}}/>
-        {/* right board */}
-        <div style={{flex:'0 0 30%',background:'#6b0d2f',borderTop:'3px solid #40081c',borderBottom:'3px solid #40081c',
-          display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'0 6px'}}>
-          <div style={{lineHeight:1.2,textAlign:'right'}}>
-            <div style={{color:'#fff',fontWeight:900,letterSpacing:'0.08em',fontFamily:'"Arial Black",Arial,sans-serif',fontSize:'clamp(5px,1.4vw,9px)',whiteSpace:'nowrap'}}>PENALTY</div>
-            <div style={{color:'rgba(255,255,255,0.55)',fontWeight:600,letterSpacing:'0.18em',fontFamily:'Arial,sans-serif',fontSize:'clamp(4px,0.9vw,7px)',whiteSpace:'nowrap'}}>SHOWDOWN</div>
-          </div>
-          <div style={{width:'clamp(15px,3.5vw,21px)',height:'clamp(15px,3.5vw,21px)',
-            border:'1.5px solid rgba(255,255,255,0.8)',borderRadius:'50%',background:'rgba(255,255,255,0.12)',
-            display:'flex',alignItems:'center',justifyContent:'center',fontSize:'clamp(6px,1.8vw,11px)'}}>⚽</div>
-        </div>
-      </div>
-
-      {/* ── GOAL FRAME (crossbar at top of hoardings, posts down to pitch) ── */}
+    <div style={{
+      position:'absolute', inset:0, zIndex:0,
+      backgroundImage:'url(/stadium.png)',
+      backgroundSize:'cover',
+      backgroundPosition:'top center',
+      backgroundRepeat:'no-repeat',
+    }}>
       <div style={{
-        position:'absolute',top:'22%',left:'32%',right:'32%',height:'12%',
-        border:'4px solid #1a0a0a',borderBottom:'none',
-        background:'rgba(4,4,4,0.55)',zIndex:4,
-      }}>
-        {/* net grid */}
-        <div style={{position:'absolute',inset:0,
-          backgroundImage:'linear-gradient(rgba(210,210,210,0.13) 1px,transparent 1px),linear-gradient(90deg,rgba(210,210,210,0.13) 1px,transparent 1px)',
-          backgroundSize:'13% 17%'}}/>
-        {/* back-of-net shadow */}
-        <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(0,0,0,0.4) 0%,transparent 60%)'}}/>
-      </div>
-
-      {/* ── PITCH ── */}
-      <div style={{position:'absolute',top:'33%',left:0,right:0,bottom:0,overflow:'hidden'}}>
-        {/* 10 alternating vertical stripes */}
-        {Array.from({length:10},(_,i)=>(
-          <div key={i} style={{position:'absolute',top:0,bottom:0,left:`${i*10}%`,width:'10.5%',
-            background:i%2===0?'#2e9120':'#38ad28'}}/>
-        ))}
-        {/* white markings */}
-        <svg style={{position:'absolute',inset:0,pointerEvents:'none'}}
-          width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {/* goal line */}
-          <line x1="0" y1="0.5" x2="100" y2="0.5" stroke="rgba(255,255,255,0.9)" strokeWidth="0.8"/>
-          {/* penalty area */}
-          <rect x="17" y="0.5" width="66" height="55" fill="none" stroke="rgba(255,255,255,0.92)" strokeWidth="0.8"/>
-          {/* 6-yard box */}
-          <rect x="33" y="0.5" width="34" height="16" fill="none" stroke="rgba(255,255,255,0.92)" strokeWidth="0.8"/>
-          {/* penalty spot */}
-          <circle cx="50" cy="37" r="1.1" fill="rgba(255,255,255,0.95)"/>
-          {/* D arc */}
-          <path d="M 23,55.5 A 30,30 0 0 1 77,55.5" fill="none" stroke="rgba(255,255,255,0.92)" strokeWidth="0.8"/>
-        </svg>
-      </div>
-
+        position:'absolute', inset:0, pointerEvents:'none',
+        animation: pulse ? 'goalFlashBg 0.8s ease' : 'none',
+      }}/>
     </div>
   );
 }
