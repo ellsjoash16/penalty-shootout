@@ -27,7 +27,7 @@ const api = async (path, body) => {
     body: JSON.stringify(body),
   });
   const text = await r.text();
-  try { return JSON.parse(text); } catch { return { error: `${r.status} on ${path}: ${text.slice(0, 80)}` }; }
+  try { return JSON.parse(text); } catch { return { error: `${r.status} @ ${location.origin}${path}` }; }
 };
 
 // ═══════════════════════════════════════════════════════════════
