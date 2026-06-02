@@ -10,9 +10,7 @@ export default async function handler(req, res) {
   if (!state.bracket) return res.status(404).json({ error: 'no tournament' });
 
   const b = state.bracket;
-  const groupMatches = (b.groups || []).flatMap(g => g.matches);
   const all = [
-    ...groupMatches,
     ...(b.r32 || []), ...(b.r16 || []), ...(b.qf || []), ...(b.sf || []),
     ...(b.final ? [b.final] : []),
   ];

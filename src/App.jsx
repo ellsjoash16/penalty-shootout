@@ -585,7 +585,7 @@ function CountryPicker({ onPick }) {
   );
 }
 
-function LoginScreen({ serverState, onJoined, onCPU, onAdminView }) {
+function LoginScreen({ serverState, onJoined, onCPU, onAdminView, onAdminManage }) {
   const [name, setName]         = useState('');
   const [tCode, setTCode]       = useState('');
   const isValidEmail = v => /^[^\s@]+@dialaflight\.co\.uk$/.test(v);
@@ -680,7 +680,7 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView }) {
   const [adminEmail, setAdminEmail]   = useState('');
   const [adminPass, setAdminPass]     = useState('');
   const [adminErr, setAdminErr]       = useState('');
-  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminUnlocked, setAdminUnlocked] = useState(() => !!sessionStorage.getItem('psc_admin'));
   const [newTourneyModal, setNewTourneyModal] = useState(false);
   const [newTourneyName, setNewTourneyName]   = useState('');
   const [newTourneyBusy, setNewTourneyBusy]   = useState(false);
@@ -709,21 +709,21 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView }) {
       {/* Admin login prompt */}
       {adminPrompt && (
         <div style={{position:'fixed',inset:0,zIndex:10001,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center'}}
-          onClick={() => { setAdminPrompt(false); setAdminErr(''); }}>
+          onMouseDown={e => { if (e.target === e.currentTarget) { setAdminPrompt(false); setAdminErr(''); } }}>
           <div style={{background:'#060f1e',border:'1px solid rgba(0,200,83,0.2)',borderRadius:10,padding:'24px 20px',width:280,display:'flex',flexDirection:'column',gap:10}}
-            onClick={e => e.stopPropagation()}>
+            onMouseDown={e => e.stopPropagation()}>
             <p style={{color:'rgba(255,255,255,0.4)',fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',margin:0}}>Admin access</p>
             <Input type="email" placeholder="Email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} autoFocus/>
             <Input type="password" placeholder="Password" value={adminPass} onChange={e => setAdminPass(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') {
-                if (adminEmail.trim() === 'TheHub@dialaflight.co.uk' && adminPass === 'Mexico@#1000') {
-                  setAdminUnlocked(true); setAdminPrompt(false); setMenuOpen(true); setAdminErr('');
+                if (adminEmail.trim().toLowerCase() === 'thehub@dialaflight.co.uk' && adminPass === 'Mexico@#1000') {
+                  sessionStorage.setItem('psc_admin','1'); setAdminUnlocked(true); setAdminPrompt(false); setMenuOpen(true); setAdminErr('');
                 } else { setAdminErr('Invalid credentials'); }
               }}}/>
             {adminErr && <p style={{color:'#ff4444',fontSize:11,margin:0}}>{adminErr}</p>}
             <Button size="sm" onClick={() => {
-              if (adminEmail.trim() === 'TheHub@dialaflight.co.uk' && adminPass === 'Mexico@#1000') {
-                setAdminUnlocked(true); setAdminPrompt(false); setMenuOpen(true); setAdminErr('');
+              if (adminEmail.trim().toLowerCase() === 'thehub@dialaflight.co.uk' && adminPass === 'Mexico@#1000') {
+                sessionStorage.setItem('psc_admin','1'); setAdminUnlocked(true); setAdminPrompt(false); setMenuOpen(true); setAdminErr('');
               } else { setAdminErr('Invalid credentials'); }
             }}>Unlock</Button>
           </div>
@@ -812,7 +812,7 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView }) {
               <Button
                 variant="secondary"
                 className="w-full justify-start gap-3"
-                onClick={() => { setMenuOpen(false); setManaging(true); }}
+                onClick={() => { setMenuOpen(false); onAdminManage(); }}
               >
                 Manage Tournament
               </Button>
@@ -843,15 +843,17 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView }) {
                 <span style={{color:'#00c853',fontSize:20,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.25em'}}>{localStorage.getItem('psc_tcode')}</span>
               </div>
             )}
-            {serverState.bracket.groups.map(g => {
-              const joined = g.players.filter(p => p.name).length;
+            {(() => {
+              const allPlayers = (serverState.bracket.r32 || []).flatMap(m => [m.p1, m.p2]);
+              const joined = allPlayers.filter(p => p.name).length;
+              const total = allPlayers.length;
               return (
-                <div key={g.id} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,overflow:'hidden'}}>
+                <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,overflow:'hidden'}}>
                   <div style={{background:'rgba(255,255,255,0.05)',padding:'6px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#fff',fontSize:11,fontWeight:800,letterSpacing:'0.15em'}}>GROUP {g.label}</span>
-                    <span style={{color:joined===3?'#00c853':'rgba(255,255,255,0.3)',fontSize:10,fontWeight:700}}>{joined}/3 joined</span>
+                    <span style={{color:'#fff',fontSize:11,fontWeight:800,letterSpacing:'0.15em'}}>PLAYERS</span>
+                    <span style={{color:joined===total?'#00c853':'rgba(255,255,255,0.3)',fontSize:10,fontWeight:700}}>{joined}/{total} joined</span>
                   </div>
-                  {g.players.map(p => (
+                  {allPlayers.map(p => (
                     <div key={p.code} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 12px',borderTop:'1px solid rgba(255,255,255,0.04)'}}>
                       <div style={{width:7,height:7,borderRadius:'50%',background:p.name?'#00c853':'rgba(255,255,255,0.15)',flexShrink:0}}/>
                       <span style={{fontSize:12,color:p.name?'#fff':'rgba(255,255,255,0.25)',fontWeight:p.name?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
@@ -859,42 +861,9 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView }) {
                       </span>
                     </div>
                   ))}
-                  {g.matches.filter(m => m.played && m.kicks).map(m => (
-                    <div key={m.id} style={{borderTop:'1px solid rgba(255,255,255,0.06)',padding:'8px 12px'}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                        <span style={{fontSize:10,color:'#fff',fontWeight:700}}>{m.p1.name} <span style={{color:'rgba(255,255,255,0.3)'}}>vs</span> {m.p2.name}</span>
-                        <span style={{fontSize:11,fontWeight:900,color:'#00c853',fontFamily:"'DM Sans',system-ui,sans-serif"}}>{m.p1Score}–{m.p2Score}</span>
-                      </div>
-                      {[1,2,3,4,5].map(round => {
-                        const p1k = m.kicks.find(k => k.round===round && k.shooter==='p1');
-                        const p2k = m.kicks.find(k => k.round===round && k.shooter==='p2');
-                        return (
-                          <div key={round} style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:4,marginBottom:3,fontSize:9}}>
-                            <span style={{color:p1k?.isGoal?'#00c853':'rgba(255,255,255,0.4)',textAlign:'left'}}>
-                              {ZONE_ICONS[p1k?.shot]}→{ZONE_ICONS[p1k?.save]} {p1k?.isGoal?'⚽':'🧤'}
-                            </span>
-                            <span style={{color:'rgba(255,255,255,0.2)'}}>R{round}</span>
-                            <span style={{color:p2k?.isGoal?'#00c853':'rgba(255,255,255,0.4)',textAlign:'right'}}>
-                              {p2k?.isGoal?'⚽':'🧤'} {ZONE_ICONS[p2k?.shot]}→{ZONE_ICONS[p2k?.save]}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                  {g.matches.filter(m => !m.played && m.submissions).map(m => {
-                    const s1 = !!m.submissions?.p1, s2 = !!m.submissions?.p2;
-                    if (!s1 && !s2) return null;
-                    return (
-                      <div key={m.id+'_w'} style={{borderTop:'1px solid rgba(255,255,255,0.06)',padding:'6px 12px',display:'flex',justifyContent:'space-between'}}>
-                        <span style={{fontSize:9,color:'rgba(255,255,255,0.4)'}}>{m.p1.name} vs {m.p2.name}</span>
-                        <span style={{fontSize:9,color:'#ff6b35'}}>{s1?'✓':'-'} / {s2?'✓':'-'} waiting</span>
-                      </div>
-                    );
-                  })}
                 </div>
               );
-            })}
+            })()}
           </div>
         </div>
       )}
@@ -1040,73 +1009,27 @@ function SubmitMatchScreen({ match, myCode, onClose }) {
     </div>
   );
 
-  // Results view
-  if (played && match.kicks) {
-    const p1Score = match.p1Score ?? 0, p2Score = match.p2Score ?? 0;
-    const myScore = isP1 ? p1Score : p2Score;
-    const oppScore = isP1 ? p2Score : p1Score;
-    const iWon = myScore > oppScore;
+  // Match complete — don't reveal result to players
+  if (played) {
     return (
       <Overlay>
-        <div style={{textAlign:'center',padding:'12px 0'}}>
-          <div style={{fontSize:42,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",color:iWon?'#00c853':'#ff1744',letterSpacing:2}}>
-            {iWon ? 'YOU WIN' : 'YOU LOSE'}
-          </div>
-          <div style={{fontSize:28,fontWeight:900,color:'#fff',marginTop:4,fontFamily:"'DM Sans',system-ui,sans-serif"}}>
-            {myScore} – {oppScore}
-          </div>
-          <div style={{color:'rgba(255,255,255,0.35)',fontSize:10,marginTop:2}}>{me.name} vs {opp.name}</div>
-        </div>
-        <div style={{display:'flex',flexDirection:'column',gap:8}}>
-          {[1,2,3,4,5].map(round => {
-            const myKick  = match.kicks.find(k => k.round===round && k.shooter===myKey);
-            const oppKick = match.kicks.find(k => k.round===round && k.shooter===oppKey);
-            return (
-              <div key={round} style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,padding:'10px 12px'}}>
-                <div style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:'0.15em',marginBottom:6}}>ROUND {round}</div>
-                <div style={{display:'flex',flexDirection:'column',gap:4}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{color:'rgba(255,255,255,0.5)',fontSize:10,width:60,flexShrink:0}}>You shot</span>
-                    <span style={{background:'rgba(255,255,255,0.08)',borderRadius:3,padding:'2px 6px',fontSize:11,fontWeight:700,color:'#fff'}}>{ZONE_ICONS[myKick?.shot]} {ZONE_LABELS[myKick?.shot]}</span>
-                    <span style={{color:'rgba(255,255,255,0.3)',fontSize:10}}>→ they saved {ZONE_ICONS[myKick?.save]}</span>
-                    <span style={{marginLeft:'auto',fontSize:11,fontWeight:800,color:myKick?.isGoal?'#00c853':'#ff1744'}}>{myKick?.isGoal?'GOAL':'SAVED'}</span>
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{color:'rgba(255,255,255,0.5)',fontSize:10,width:60,flexShrink:0}}>They shot</span>
-                    <span style={{background:'rgba(255,255,255,0.08)',borderRadius:3,padding:'2px 6px',fontSize:11,fontWeight:700,color:'#fff'}}>{ZONE_ICONS[oppKick?.shot]} {ZONE_LABELS[oppKick?.shot]}</span>
-                    <span style={{color:'rgba(255,255,255,0.3)',fontSize:10}}>→ you saved {ZONE_ICONS[oppKick?.save]}</span>
-                    <span style={{marginLeft:'auto',fontSize:11,fontWeight:800,color:oppKick?.isGoal?'#ff1744':'#00c853'}}>{oppKick?.isGoal?'CONCEDED':'SAVED'}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div style={{textAlign:'center',padding:'40px 0'}}>
+          <div style={{color:'#fff',fontSize:18,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.05em',textTransform:'uppercase'}}>Match Complete</div>
+          <div style={{color:'rgba(255,255,255,0.4)',fontSize:12,marginTop:8}}>The admin will announce the result.</div>
         </div>
       </Overlay>
     );
   }
 
-  // Waiting view
+  // Waiting view — submitted, waiting for opponent or admin
   if (mySub) {
+    const bothIn = !!oppSub;
     return (
       <Overlay>
         <div style={{textAlign:'center',padding:'30px 0'}}>
-          <div style={{fontSize:36}}>⏳</div>
-          <div style={{color:'#00c853',fontSize:16,fontWeight:800,marginTop:12}}>Shots & saves locked in</div>
-          <div style={{color:'rgba(255,255,255,0.45)',fontSize:12,marginTop:8}}>Waiting for {opp.name.split(' ')[0]} to submit…</div>
-        </div>
-        <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,padding:'12px'}}>
-          <div style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:'0.15em',marginBottom:8}}>YOUR SUBMISSION</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-            {[0,1,2,3,4].map(i => (
-              <div key={i} style={{display:'flex',gap:6,alignItems:'center'}}>
-                <span style={{color:'rgba(255,255,255,0.3)',fontSize:9,width:44}}>Rd {i+1}</span>
-                <span style={{fontSize:12,color:'#00c853'}}>{ZONE_ICONS[mySub.shots[i]]}</span>
-                <span style={{color:'rgba(255,255,255,0.2)',fontSize:9}}>shot</span>
-                <span style={{fontSize:12,color:'#ff6b35',marginLeft:4}}>{ZONE_ICONS[mySub.saves[i]]}</span>
-                <span style={{color:'rgba(255,255,255,0.2)',fontSize:9}}>save</span>
-              </div>
-            ))}
+          <div style={{color:'#00c853',fontSize:16,fontWeight:800}}>Shots & saves locked in</div>
+          <div style={{color:'rgba(255,255,255,0.45)',fontSize:12,marginTop:8}}>
+            {bothIn ? 'Waiting for the admin to confirm the result.' : `Waiting for ${opp.name.split(' ')[0]} to submit…`}
           </div>
         </div>
       </Overlay>
@@ -1522,6 +1445,7 @@ function SpectatorMatchView({ am }) {
 function BracketTree({ bracket, myCode, onMatchClick }) {
   const isAdmin = !myCode;
   const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
 
   // 9 columns: R32(0), R16(1), QF(2), SF(3), Final(4), SF(5), QF(6), R16(7), R32(8)
   const MH   = 52;
@@ -1533,6 +1457,24 @@ function BracketTree({ bracket, myCode, onMatchClick }) {
 
   const colX = c => c * (MW + GAP);
   const NATURAL_W = colX(8) + MW + PX * 2;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const TOP_BAR = 56;
+    const measure = () => {
+      const w = el.getBoundingClientRect().width;
+      const availH = window.innerHeight - TOP_BAR;
+      const scaleW = w > 0 ? w / NATURAL_W : 1;
+      const scaleH = availH > 0 ? availH / naturalH : 1;
+      setScale(Math.min(scaleW, scaleH));
+    };
+    measure();
+    const obs = new ResizeObserver(measure);
+    obs.observe(el);
+    window.addEventListener('resize', measure);
+    return () => { obs.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
 
   const r32Top = i => i * STEP;
   const r16Top = i => (r32Top(i * 2) + r32Top(i * 2 + 1)) / 2;
@@ -1656,8 +1598,8 @@ function BracketTree({ bracket, myCode, onMatchClick }) {
   const LABELS = ['R32','R16','QF','SF','Final','SF','QF','R16','R32'];
 
   return (
-    <div ref={containerRef} style={{overflowX:'auto',overflowY:'visible',WebkitOverflowScrolling:'touch'}}>
-      <div style={{position:'relative',width:NATURAL_W,height:naturalH,minWidth:NATURAL_W}}>
+    <div ref={containerRef} style={{width:'100%',overflow:'hidden',height:naturalH*scale}}>
+      <div style={{position:'relative',width:NATURAL_W,height:naturalH,transform:`scale(${scale})`,transformOrigin:'top left'}}>
         {LABELS.map((label, col) => (
           <div key={col} style={{position:'absolute',left:colX(col)+PX,top:4,width:MW,
             textAlign:'center',color:'rgba(255,255,255,0.4)',fontSize:8,
@@ -1971,7 +1913,7 @@ function CPUBracketScreen({ playerName, onExit }) {
 // GROUP STAGE VIEW
 // ═══════════════════════════════════════════════════════════════
 
-function GroupStageView({ bracket, myCode, onMatchClick }) {
+function GroupStageView_UNUSED({ bracket, myCode, onMatchClick }) {
   const groups = bracket.groups || [];
   const isAdmin = !myCode;
   return (
@@ -2077,15 +2019,35 @@ function GroupStageView({ bracket, myCode, onMatchClick }) {
 // TOURNAMENT SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, onBack, onDeleteTournament }) {
+function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, startManaging, onBack, onLogout, onDeleteTournament }) {
   const [submitMatch, setSubmitMatch] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [managing, setManaging] = useState(!!startManaging);
+  const [resolvingId, setResolvingId] = useState(null);
   const isAdmin = !myCode;
+
+  const pendingMatches = (() => {
+    const result = [];
+    for (const [key, label] of [['r32','Round of 32'],['r16','Round of 16'],['qf','Quarter-Finals'],['sf','Semi-Finals']])
+      for (const m of (bracket[key] || []))
+        if (m.submissions?.p1 && m.submissions?.p2 && !m.played && m.p1?.name && m.p2?.name)
+          result.push({ match: m, stage: label });
+    if (bracket.final?.submissions?.p1 && bracket.final?.submissions?.p2 && !bracket.final?.played && bracket.final?.p1?.name && bracket.final?.p2?.name)
+      result.push({ match: bracket.final, stage: 'Final' });
+    return result;
+  })();
 
   const stageLabel = {groups:'GROUP STAGE',r32:'ROUND OF 32',r16:'ROUND OF 16',qf:'QUARTER-FINALS',sf:'SEMI-FINALS',final:'FINAL',champion:'CHAMPION'}[bracket.stage] || '';
 
   const openMatch = (match) => setSubmitMatch(match);
+
+  const resolveMatch = async (matchId, winnerCode) => {
+    if (resolvingId) return;
+    setResolvingId(matchId);
+    try { await api('/api/match/resolve', { matchId, winnerCode }); } catch(e) {}
+    setResolvingId(null);
+  };
 
   return (
     <div style={{height:'100%',overflowY:'auto',WebkitOverflowScrolling:'touch',position:'relative',background:'#030d1a url(/bg.png) center/cover no-repeat fixed'}}>
@@ -2122,6 +2084,21 @@ function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, onB
 
         {/* Drawer items */}
         <div style={{flex:1,padding:'10px 0'}}>
+          {isAdmin && (
+            <button onClick={() => { setMenuOpen(false); setManaging(true); }} style={{
+              width:'100%',display:'flex',alignItems:'center',gap:12,
+              padding:'14px 20px',background:'none',border:'none',
+              color:'rgba(255,255,255,0.65)',
+              fontSize:13,letterSpacing:'0.02em',
+              fontFamily:"'DM Sans',system-ui,sans-serif",fontWeight:500,
+              cursor:'pointer',textAlign:'left',
+            }}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.05)'}
+              onMouseLeave={e=>e.currentTarget.style.background='none'}
+            >
+              Manage Tournament
+            </button>
+          )}
           <button onClick={() => { setMenuOpen(false); onBack(); }} style={{
             width:'100%',display:'flex',alignItems:'center',gap:12,
             padding:'14px 20px',background:'none',border:'none',
@@ -2139,7 +2116,7 @@ function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, onB
 
         {/* Admin zone */}
         {isAdmin && (
-          <div style={{padding:'10px 16px 22px',borderTop:'1px solid rgba(255,68,68,0.15)'}}>
+          <div style={{padding:'10px 16px 22px',borderTop:'1px solid rgba(255,68,68,0.15)',display:'flex',flexDirection:'column',gap:8}}>
             <button onClick={() => { setMenuOpen(false); setConfirmDelete(true); }} style={{
               width:'100%',padding:'11px',borderRadius:8,
               background:'rgba(255,23,68,0.08)',border:'1px solid rgba(255,23,68,0.35)',
@@ -2148,9 +2125,104 @@ function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, onB
             }}>
               Delete Tournament
             </button>
+            <button onClick={() => { setMenuOpen(false); onLogout(); }} style={{
+              width:'100%',padding:'11px',borderRadius:8,
+              background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.12)',
+              color:'rgba(255,255,255,0.45)',fontSize:12,letterSpacing:'0.04em',
+              fontFamily:"'DM Sans',system-ui,sans-serif",fontWeight:700,cursor:'pointer',
+            }}>
+              Logout
+            </button>
           </div>
         )}
       </div>
+
+      {/* Manage tournament overlay */}
+      {managing && (
+        <div style={{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.85)',overflowY:'auto'}} onClick={() => setManaging(false)}>
+          <div style={{minHeight:'100%',maxWidth:480,margin:'0 auto',padding:'24px 16px',display:'flex',flexDirection:'column',gap:12}} onClick={e => e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <h2 style={{color:'#fff',fontSize:16,fontWeight:900,margin:0,letterSpacing:'0.05em'}}>Manage Tournament</h2>
+                {tournamentName && <p style={{color:'rgba(255,255,255,0.4)',fontSize:11,margin:'2px 0 0',letterSpacing:'0.05em'}}>{tournamentName}</p>}
+              </div>
+              <button onClick={() => setManaging(false)} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:20,cursor:'pointer',lineHeight:1}}>✕</button>
+            </div>
+            {tournamentCode && (
+              <div style={{background:'rgba(0,200,83,0.08)',border:'1px solid rgba(0,200,83,0.2)',borderRadius:8,padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <span style={{color:'rgba(255,255,255,0.5)',fontSize:10,letterSpacing:'0.15em',textTransform:'uppercase'}}>Tournament Code</span>
+                <span style={{color:'#00c853',fontSize:20,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.25em'}}>{tournamentCode}</span>
+              </div>
+            )}
+            {(() => {
+              const allPlayers = (bracket.r32 || []).flatMap(m => [m.p1, m.p2]);
+              const joined = allPlayers.filter(p => p.name).length;
+              const total = allPlayers.length;
+              return (
+                <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,overflow:'hidden'}}>
+                  <div style={{background:'rgba(255,255,255,0.05)',padding:'6px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{color:'#fff',fontSize:11,fontWeight:800,letterSpacing:'0.15em'}}>PLAYERS</span>
+                    <span style={{color:joined===total?'#00c853':'rgba(255,255,255,0.3)',fontSize:10,fontWeight:700}}>{joined}/{total} joined</span>
+                  </div>
+                  {allPlayers.map(p => (
+                    <div key={p.code} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 12px',borderTop:'1px solid rgba(255,255,255,0.04)'}}>
+                      <div style={{width:7,height:7,borderRadius:'50%',background:p.name?'#00c853':'rgba(255,255,255,0.15)',flexShrink:0}}/>
+                      <span style={{fontSize:12,color:p.name?'#fff':'rgba(255,255,255,0.25)',fontWeight:p.name?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {p.name || 'Empty slot'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {pendingMatches.length > 0 && (
+              <div style={{marginTop:8}}>
+                <div style={{color:'#ff6b35',fontSize:10,fontWeight:800,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8,paddingLeft:2}}>
+                  Awaiting Result — {pendingMatches.length} match{pendingMatches.length!==1?'es':''}
+                </div>
+                {pendingMatches.map(({match:m, stage}) => (
+                  <div key={m.id} style={{background:'rgba(255,107,53,0.06)',border:'1px solid rgba(255,107,53,0.25)',borderRadius:8,overflow:'hidden',marginBottom:8}}>
+                    <div style={{background:'rgba(255,107,53,0.1)',padding:'5px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{color:'rgba(255,255,255,0.5)',fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase'}}>{stage}</span>
+                      <span style={{color:'#ff6b35',fontSize:9,fontWeight:700,letterSpacing:'0.1em'}}>BOTH SUBMITTED</span>
+                    </div>
+                    <div style={{padding:'10px 12px',display:'flex',gap:8}}>
+                      {[m.p1, m.p2].map(player => (
+                        <button key={player.code}
+                          disabled={!!resolvingId}
+                          onClick={() => resolveMatch(m.id, player.code)}
+                          style={{
+                            flex:1,padding:'10px 8px',borderRadius:7,cursor:resolvingId?'default':'pointer',
+                            background:resolvingId===m.id?'rgba(0,200,83,0.05)':'rgba(0,200,83,0.08)',
+                            border:`1px solid ${resolvingId===m.id?'rgba(0,200,83,0.15)':'rgba(0,200,83,0.35)'}`,
+                            color:resolvingId?'rgba(255,255,255,0.3)':'#fff',
+                            fontSize:12,fontWeight:700,fontFamily:"'DM Sans',system-ui,sans-serif",
+                            textAlign:'center',transition:'all 0.15s',
+                          }}
+                          onMouseEnter={e=>{ if(!resolvingId){ e.currentTarget.style.background='rgba(0,200,83,0.18)'; e.currentTarget.style.borderColor='rgba(0,200,83,0.6)'; } }}
+                          onMouseLeave={e=>{ e.currentTarget.style.background='rgba(0,200,83,0.08)'; e.currentTarget.style.borderColor='rgba(0,200,83,0.35)'; }}
+                        >
+                          {resolvingId===m.id ? '...' : player.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{padding:'0 12px 8px',color:'rgba(255,255,255,0.3)',fontSize:10}}>
+                      Tap a player to advance them to the next round
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {pendingMatches.length === 0 && (bracket.r32 || []).flatMap(m=>[m.p1,m.p2]).every(p=>p.name) && (
+              <div style={{textAlign:'center',color:'rgba(255,255,255,0.2)',fontSize:11,padding:'16px 0'}}>
+                No matches awaiting a result
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Confirm delete overlay */}
       {confirmDelete && (
@@ -2200,12 +2272,6 @@ function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, onB
       {/* Bracket tree */}
       <BracketTree bracket={bracket} myCode={myCode} onMatchClick={openMatch}/>
 
-      {/* Group stage — always visible below bracket, scroll down to see */}
-      <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',paddingTop:4,position:'relative',zIndex:1}}>
-        <div style={{padding:'10px 16px 4px',color:'rgba(255,255,255,0.35)',fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',fontWeight:700}}>Group Stage</div>
-        <GroupStageView bracket={bracket} myCode={myCode} onMatchClick={openMatch}/>
-      </div>
-
       {submitMatch && (
         <SubmitMatchScreen
           match={submitMatch}
@@ -2246,6 +2312,8 @@ export default function App() {
   const [myCode, setMyCode] = useState(() => localStorage.getItem('psc_code'));
   const [screen, setScreen] = useState('loading'); // loading | login | tournament | champion | cpu
   const [cpuName, setCpuName] = useState('');
+  const [adminSession, setAdminSession] = useState(() => !!sessionStorage.getItem('psc_admin'));
+  const [startManaging, setStartManaging] = useState(false);
 
   // Poll server state every 1.5s
   useEffect(() => {
@@ -2256,7 +2324,12 @@ export default function App() {
         const data = await fetch('/api/state', { signal: AbortSignal.timeout(3000) }).then(r => r.json());
         if (!cancelled) {
           setServerState(data);
-          setScreen(prev => prev === 'loading' ? (myCode ? 'tournament' : 'login') : prev);
+          setScreen(prev => {
+            if (prev !== 'loading') return prev;
+            if (myCode) return 'tournament';
+            if (sessionStorage.getItem('psc_admin') && data?.bracket) return 'tournament';
+            return 'login';
+          });
         }
       } catch (_) {
         if (!cancelled) setScreen(prev => prev === 'loading' ? 'login' : prev);
@@ -2280,8 +2353,30 @@ export default function App() {
   };
 
   const handleAdminView = (_tcode, _tname) => {
+    sessionStorage.setItem('psc_admin', '1');
+    setAdminSession(true);
     setMyCode(null);
+    setStartManaging(false);
     setScreen('tournament');
+  };
+
+  const handleAdminManage = () => {
+    sessionStorage.setItem('psc_admin', '1');
+    setAdminSession(true);
+    setMyCode(null);
+    setStartManaging(true);
+    setScreen('tournament');
+  };
+
+  const handleAdminLogout = () => {
+    sessionStorage.removeItem('psc_admin');
+    setAdminSession(false);
+    setMyCode(null);
+    localStorage.removeItem('psc_code');
+    localStorage.removeItem('psc_name');
+    localStorage.removeItem('psc_tcode');
+    localStorage.removeItem('psc_tname');
+    setScreen('login');
   };
 
   const handleCPU = (name) => {
@@ -2366,7 +2461,7 @@ export default function App() {
 
       {screen === 'login' && (
         <div style={{height:'100%',overflowY:'auto'}}>
-          <LoginScreen serverState={serverState} onJoined={handleJoined} onCPU={handleCPU} onAdminView={handleAdminView}/>
+          <LoginScreen serverState={serverState} onJoined={handleJoined} onCPU={handleCPU} onAdminView={handleAdminView} onAdminManage={handleAdminManage}/>
         </div>
       )}
 
@@ -2386,12 +2481,14 @@ export default function App() {
             myCode={myCode}
             tournamentCode={serverState?.tournamentCode || localStorage.getItem('psc_tcode')}
             tournamentName={serverState?.tournamentName || localStorage.getItem('psc_tname')}
+            startManaging={startManaging}
             onBack={() => {
               setMyCode(null);
               localStorage.removeItem('psc_code');
               localStorage.removeItem('psc_name');
               setScreen('login');
             }}
+            onLogout={handleAdminLogout}
             onDeleteTournament={handleReset}
           />
         </div>

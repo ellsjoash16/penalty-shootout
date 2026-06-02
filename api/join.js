@@ -18,26 +18,16 @@ export default async function handler(req, res) {
       const b = JSON.parse(JSON.stringify(state.bracket));
 
       let found = null;
-      for (const group of b.groups) {
-        for (const player of group.players) {
-          if (player.code && !player.name) {
-            found = { group, player };
-            break;
-          }
-        }
-        if (found) break;
+      for (const match of b.r32) {
+        if (match.p1.code && !match.p1.name) { found = { slot: 'p1', match }; break; }
+        if (match.p2.code && !match.p2.name) { found = { slot: 'p2', match }; break; }
       }
 
-      if (!found) throw { status: 409, error: 'tournament is full — all 48 slots taken' };
+      if (!found) throw { status: 409, error: 'tournament is full — all 32 slots taken' };
 
-      const { group, player } = found;
-      player.name = name.trim();
-      playerCode = player.code;
-
-      for (const match of group.matches) {
-        if (match.p1.code === player.code) match.p1.name = player.name;
-        if (match.p2.code === player.code) match.p2.name = player.name;
-      }
+      const { slot, match } = found;
+      match[slot].name = name.trim();
+      playerCode = match[slot].code;
 
       return { ...state, bracket: b };
     });

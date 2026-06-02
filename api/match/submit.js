@@ -1,13 +1,8 @@
 import { atomicUpdate } from '../_lib/db.js';
-import { resolveMatch } from '../_lib/match.js';
-import { recordWin } from '../_lib/bracket.js';
 
 const ZONES = ['tl', 'tc', 'tr', 'bl', 'bc', 'br'];
 
 function findMatch(bracket, matchId) {
-  for (const g of bracket.groups || [])
-    for (const m of g.matches)
-      if (m.id === matchId) return m;
   for (const arr of [bracket.r32, bracket.r16, bracket.qf, bracket.sf])
     for (const m of (arr || []))
       if (m.id === matchId) return m;
@@ -42,28 +37,7 @@ export default async function handler(req, res) {
 
       match.submissions[key] = { shots, saves };
 
-      let newBracket = b;
-      if (match.submissions.p1 && match.submissions.p2) {
-        const { kicks, p1Score, p2Score, winnerKey } = resolveMatch({
-          p1Sub: match.submissions.p1,
-          p2Sub: match.submissions.p2,
-        });
-        match.kicks = kicks;
-        match.p1Score = p1Score;
-        match.p2Score = p2Score;
-        const winnerSlot = winnerKey === 'p1' ? match.p1 : match.p2;
-        newBracket = recordWin(b, matchId, winnerSlot);
-
-        const resolvedMatch = findMatch(newBracket, matchId);
-        if (resolvedMatch) {
-          resolvedMatch.submissions = match.submissions;
-          resolvedMatch.kicks = kicks;
-          resolvedMatch.p1Score = p1Score;
-          resolvedMatch.p2Score = p2Score;
-        }
-      }
-
-      return { ...state, bracket: newBracket, activeMatch: null };
+      return { ...state, bracket: b, activeMatch: null };
     });
   } catch (e) {
     if (e?.status) return res.status(e.status).json({ error: e.error });
