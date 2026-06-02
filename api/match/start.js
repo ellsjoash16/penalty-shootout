@@ -9,11 +9,12 @@ export default async function handler(req, res) {
   if (state.activeMatch) return res.status(409).json({ error: 'a match is already in progress' });
   if (!state.bracket) return res.status(404).json({ error: 'no tournament' });
 
+  const b = state.bracket;
+  const groupMatches = (b.groups || []).flatMap(g => g.matches);
   const all = [
-    ...(state.bracket.wc || []),
-    ...state.bracket.r32, ...state.bracket.r16,
-    ...state.bracket.qf, ...state.bracket.sf,
-    ...(state.bracket.final ? [state.bracket.final] : []),
+    ...groupMatches,
+    ...(b.r32 || []), ...(b.r16 || []), ...(b.qf || []), ...(b.sf || []),
+    ...(b.final ? [b.final] : []),
   ];
   const match = all.find(m => m.id === matchId);
   if (!match) return res.status(404).json({ error: 'match not found' });

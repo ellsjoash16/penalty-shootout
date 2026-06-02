@@ -1,31 +1,50 @@
-import { loadState, saveState } from './_lib/db.js';
+import { atomicUpdate } from './_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { name } = req.body;
+  const { name, tournamentCode } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name required' });
+  if (!tournamentCode?.trim()) return res.status(400).json({ error: 'tournament code required' });
 
-  const state = await loadState();
-  if (!state.bracket) return res.status(404).json({ error: 'no tournament yet' });
+  let playerCode;
 
-  const b = JSON.parse(JSON.stringify(state.bracket));
+  try {
+    await atomicUpdate(state => {
+      if (!state.bracket) throw { status: 404, error: 'no tournament yet' };
+      if (state.tournamentCode && tournamentCode.trim().toUpperCase() !== state.tournamentCode.toUpperCase())
+        throw { status: 403, error: 'invalid tournament code' };
 
-  // Collect every slot that has a code but no name yet
-  const available = [];
-  b.wc.forEach(m => {
-    if (m.p1?.code && !m.p1.name) available.push(m.p1);
-    if (m.p2?.code && !m.p2.name) available.push(m.p2);
-  });
-  b.r32.forEach(m => {
-    if (m.p1?.code && !m.p1.name) available.push(m.p1);
-  });
+      const b = JSON.parse(JSON.stringify(state.bracket));
 
-  if (!available.length) return res.status(409).json({ error: 'tournament is full — all 48 slots taken' });
+      let found = null;
+      for (const group of b.groups) {
+        for (const player of group.players) {
+          if (player.code && !player.name) {
+            found = { group, player };
+            break;
+          }
+        }
+        if (found) break;
+      }
 
-  const slot = available[Math.floor(Math.random() * available.length)];
-  slot.name = name.trim();
+      if (!found) throw { status: 409, error: 'tournament is full — all 48 slots taken' };
 
-  await saveState({ ...state, bracket: b });
-  res.json({ ok: true, code: slot.code });
+      const { group, player } = found;
+      player.name = name.trim();
+      playerCode = player.code;
+
+      for (const match of group.matches) {
+        if (match.p1.code === player.code) match.p1.name = player.name;
+        if (match.p2.code === player.code) match.p2.name = player.name;
+      }
+
+      return { ...state, bracket: b };
+    });
+  } catch (e) {
+    if (e?.status) return res.status(e.status).json({ error: e.error });
+    throw e;
+  }
+
+  res.json({ ok: true, code: playerCode });
 }
