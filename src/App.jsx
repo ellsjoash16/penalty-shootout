@@ -2681,7 +2681,7 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tou
   // Code entry — shown when no local tournament code saved and user isn't admin
   const [codeInput, setCodeInput] = useState('');
   const [codeErr, setCodeErr] = useState('');
-  const needsCode = !isAdmin && !localStorage.getItem('psc_tcode');
+  const needsCode = !isAdmin && !localStorage.getItem('psc_tcode') && swMode !== 'sweepstake';
 
   const submitCode = () => {
     const c = codeInput.trim().toUpperCase();
