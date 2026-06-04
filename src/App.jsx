@@ -2573,21 +2573,29 @@ function HomeScreen({ serverState, onSelect }) {
   return (
     <div className="h-full overflow-y-auto flex flex-col items-center justify-center p-6 gap-6 relative">
       <StadiumBg/>
-      <div className="relative z-10 w-full max-w-xl flex flex-col items-center gap-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground text-center font-semibold">
+      <div className="relative z-10 w-full max-w-sm flex flex-col items-center gap-5">
+        <p style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:'0.4em',textTransform:'uppercase',fontWeight:700}}>
           DAF World Cup 2026
         </p>
 
-        <div className="grid grid-cols-2 gap-4 w-full">
+        <div className="grid grid-cols-2 gap-3 w-full">
           {/* Penalties card */}
           <Card
-            className="cursor-pointer border-border/40 bg-card/80 backdrop-blur hover:bg-card/95 hover:border-primary/40 transition-all duration-150 hover:-translate-y-0.5"
             onClick={() => onSelect('bracket')}
+            className="cursor-pointer group transition-transform duration-150 hover:-translate-y-1"
+            style={{background:'rgba(4,16,32,0.85)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'3px solid #00c853',borderRadius:12}}
           >
             <CardContent className="p-5 flex flex-col gap-3">
-              <span className="text-base font-bold uppercase tracking-wide leading-none">Penalties</span>
-              <span className="text-xs text-muted-foreground leading-relaxed">Penalty shootout bracket tournament</span>
-              <Badge variant={!!bracket && stage !== 'champion' ? 'default' : 'outline'} className="text-[10px] w-fit">
+              <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:22,fontWeight:900,letterSpacing:'0.04em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
+                Penalties
+              </span>
+              <span style={{color:'rgba(255,255,255,0.38)',fontSize:11,lineHeight:1.5}}>
+                Penalty shootout bracket
+              </span>
+              <Badge
+                variant={!!bracket && stage !== 'champion' ? 'default' : 'outline'}
+                className="w-fit text-[10px] tracking-wide"
+              >
                 {stageLabel || (bracket ? 'Active' : 'No tournament')}
               </Badge>
             </CardContent>
@@ -2595,15 +2603,24 @@ function HomeScreen({ serverState, onSelect }) {
 
           {/* Sweepstake card */}
           <Card
-            className="cursor-pointer border-border/40 bg-card/80 backdrop-blur hover:bg-card/95 hover:border-yellow-500/40 transition-all duration-150 hover:-translate-y-0.5"
             onClick={() => onSelect('sweepstake')}
+            className="cursor-pointer group transition-transform duration-150 hover:-translate-y-1"
+            style={{background:'rgba(4,16,32,0.85)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'3px solid #ffd700',borderRadius:12}}
           >
             <CardContent className="p-5 flex flex-col gap-3">
-              <span className="text-base font-bold uppercase tracking-wide leading-none">Sweepstake</span>
-              <span className="text-xs text-muted-foreground leading-relaxed">World Cup team draw &amp; live leaderboard</span>
+              <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:22,fontWeight:900,letterSpacing:'0.04em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
+                Sweepstake
+              </span>
+              <span style={{color:'rgba(255,255,255,0.38)',fontSize:11,lineHeight:1.5}}>
+                Team draw &amp; leaderboard
+              </span>
               {swLeader
-                ? <Badge variant="outline" className="text-[10px] text-yellow-400 border-yellow-500/40 w-fit">Leader: {swLeader.name}</Badge>
-                : <Badge variant="outline" className="text-[10px] w-fit">{swParts ? `${swParts} players` : 'Not started'}</Badge>
+                ? <Badge variant="outline" className="w-fit text-[10px] tracking-wide" style={{color:'#ffd700',borderColor:'rgba(255,215,0,0.35)'}}>
+                    {swLeader.name}
+                  </Badge>
+                : <Badge variant="outline" className="w-fit text-[10px] tracking-wide">
+                    {swParts ? `${swParts} players` : 'Not started'}
+                  </Badge>
               }
             </CardContent>
           </Card>
