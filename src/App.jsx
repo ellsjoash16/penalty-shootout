@@ -2702,6 +2702,7 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tou
   const [menuOpen, setMenuOpen] = useState(false);
   const [managing, setManaging] = useState(!!startManaging);
   const [swMode, setSwMode] = useState(initialSwMode || 'bracket');
+  useEffect(() => { setSwMode(initialSwMode || 'bracket'); }, [initialSwMode]);
   const [managingSweepstake, setManagingSweepstake] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
   const [winnerSelections, setWinnerSelections] = useState({});
