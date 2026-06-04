@@ -2557,10 +2557,109 @@ function SweepstakeLeaderboard({ sweepstake }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// HOME SCREEN
+// ═══════════════════════════════════════════════════════════════
+
+function HomePanel({ title, desc, accent, status, statusLit, onClick }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      onTouchStart={() => setHov(true)} onTouchEnd={() => setHov(false)}
+      style={{
+        flex:'1 1 200px', maxWidth:260, minHeight:200,
+        background:'rgba(4,16,32,0.92)',
+        border:`1px solid ${hov ? accent+'55' : 'rgba(255,255,255,0.09)'}`,
+        borderTop:`3px solid ${accent}`,
+        borderRadius:16, padding:'26px 22px 20px',
+        display:'flex', flexDirection:'column', gap:10,
+        cursor:'pointer', textAlign:'left',
+        boxShadow: hov
+          ? `0 0 48px ${accent}18, 0 20px 60px rgba(0,0,0,0.65)`
+          : '0 8px 40px rgba(0,0,0,0.55)',
+        transform: hov ? 'translateY(-5px) scale(1.015)' : 'translateY(0) scale(1)',
+        transition:'all 0.2s ease',
+        outline:'none', fontFamily:"'DM Sans',system-ui,sans-serif",
+      }}
+    >
+      <div style={{
+        color:'#fff', fontSize:32, fontWeight:900, letterSpacing:'0.04em',
+        fontFamily:"'Big Shoulders Display',sans-serif", textTransform:'uppercase', lineHeight:1,
+      }}>{title}</div>
+      <div style={{color:'rgba(255,255,255,0.38)',fontSize:12,letterSpacing:'0.02em',flex:1,lineHeight:1.5}}>{desc}</div>
+      <div style={{paddingTop:12,borderTop:`1px solid rgba(255,255,255,0.07)`,display:'flex',alignItems:'center',gap:7}}>
+        <div style={{
+          width:7,height:7,borderRadius:'50%',flexShrink:0,
+          background: statusLit ? accent : 'rgba(255,255,255,0.18)',
+          boxShadow: statusLit ? `0 0 10px ${accent}` : 'none',
+          transition:'all 0.3s',
+        }}/>
+        <span style={{color:statusLit?accent:'rgba(255,255,255,0.28)',fontSize:10,fontWeight:600,letterSpacing:'0.07em'}}>{status}</span>
+      </div>
+    </button>
+  );
+}
+
+function HomeScreen({ serverState, onSelect }) {
+  const bracket  = serverState?.bracket;
+  const sw       = serverState?.sweepstake;
+  const stage    = bracket?.stage;
+  const stageLabel = {r32:'Round of 32',r16:'Round of 16',qf:'Quarter-Finals',sf:'Semi-Finals',final:'Final',champion:'Champion'}[stage];
+  const swParts  = sw?.participants?.length || 0;
+  const swLeader = swParts
+    ? [...sw.participants].sort((a,b) => swParticipantPts(b,sw.teamData||{}) - swParticipantPts(a,sw.teamData||{}))[0]
+    : null;
+
+  return (
+    <div style={{
+      height:'100%', overflowY:'auto',
+      background:'#030d1a url(/bg.png) center/cover no-repeat fixed',
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      padding:'32px 20px', position:'relative', fontFamily:"'DM Sans',system-ui,sans-serif",
+    }}>
+      <StadiumBg/>
+      <div style={{position:'relative',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center',gap:40,width:'100%',maxWidth:580}}>
+
+        {/* Logo */}
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,animation:'scaleIn 0.5s ease'}}>
+          <img src="/daf-logo.png"
+            style={{height:80,objectFit:'contain',filter:'drop-shadow(0 0 28px rgba(0,200,83,0.45))',animation:'floatBob 3s ease-in-out infinite'}}
+            draggable={false} alt=""/>
+          <span style={{color:'rgba(255,255,255,0.38)',fontSize:9,letterSpacing:'0.45em',textTransform:'uppercase',fontWeight:700}}>
+            DAF World Cup 2026
+          </span>
+        </div>
+
+        {/* Panels */}
+        <div style={{display:'flex',gap:16,width:'100%',justifyContent:'center',flexWrap:'wrap'}}>
+          <HomePanel
+            title="Penalties"
+            desc="Penalty shootout bracket tournament"
+            accent="#00c853"
+            status={stageLabel || (bracket ? 'Tournament active' : 'No active tournament')}
+            statusLit={!!bracket && stage !== 'champion'}
+            onClick={() => onSelect('bracket')}
+          />
+          <HomePanel
+            title="Sweepstake"
+            desc="World Cup team draw & live leaderboard"
+            accent="#ffd700"
+            status={swLeader ? `Leader: ${swLeader.name}` : swParts ? `${swParts} players` : 'Not started'}
+            statusLit={swParts > 0}
+            onClick={() => onSelect('sweepstake')}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TOURNAMENT SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tournamentCode, tournamentName, startManaging, onLeave, onLogout, onDeleteTournament, onCPU, onJoined, onAdminLogin, onTournamentCreated, onCodeEntered }) {
+function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tournamentCode, tournamentName, startManaging, initialSwMode, onHome, onLeave, onLogout, onDeleteTournament, onCPU, onJoined, onAdminLogin, onTournamentCreated, onCodeEntered }) {
   const [submitMatch] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -2589,7 +2688,7 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tou
   })();
   const [menuOpen, setMenuOpen] = useState(false);
   const [managing, setManaging] = useState(!!startManaging);
-  const [swMode, setSwMode] = useState('bracket');
+  const [swMode, setSwMode] = useState(initialSwMode || 'bracket');
   const [managingSweepstake, setManagingSweepstake] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
   const [winnerSelections, setWinnerSelections] = useState({});
@@ -2739,6 +2838,13 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tou
           </div>
 
           <div className="px-4 pb-6 pt-3 flex flex-col gap-2 border-t border-white/[0.07]">
+            {onHome && (
+              <SheetClose asChild>
+                <Button variant="ghost" className="w-full justify-start" onClick={onHome}>
+                  Home
+                </Button>
+              </SheetClose>
+            )}
             {isAdmin ? (
               <>
                 <SheetClose asChild>
@@ -3173,10 +3279,11 @@ function ChampionScreen({ name, onBack }) {
 export default function App() {
   const [serverState, setServerState] = useState(null); // null = connecting
   const [myCode, setMyCode] = useState(() => localStorage.getItem('psc_code'));
-  const [screen, setScreen] = useState('loading'); // loading | login | tournament | champion | cpu
+  const [screen, setScreen] = useState('loading'); // loading | home | tournament | champion | cpu
   const [cpuName, setCpuName] = useState('');
   const [adminSession, setAdminSession] = useState(() => !!sessionStorage.getItem('psc_admin'));
   const [startManaging, setStartManaging] = useState(false);
+  const [initialSwMode, setInitialSwMode] = useState('bracket');
 
   // Poll server state every 1.5s
   useEffect(() => {
@@ -3187,7 +3294,7 @@ export default function App() {
         const data = await fetch('/api/state', { signal: AbortSignal.timeout(3000) }).then(r => r.json());
         if (!cancelled) {
           setServerState(data);
-          setScreen(prev => prev === 'loading' ? 'tournament' : prev);
+          setScreen(prev => prev === 'loading' ? 'home' : prev);
         }
       } catch (_) {
         if (!cancelled) setScreen(prev => prev === 'loading' ? 'tournament' : prev);
@@ -3239,6 +3346,13 @@ export default function App() {
   const handleCPU = (name) => {
     setCpuName(name || 'Player');
     setScreen('cpu');
+  };
+
+  const handleHome = () => setScreen('home');
+
+  const handleSelectMode = (mode) => {
+    setInitialSwMode(mode);
+    setScreen('tournament');
   };
 
   const handleReset = async () => {
@@ -3332,6 +3446,12 @@ export default function App() {
         </div>
       )}
 
+      {screen === 'home' && (
+        <div style={W}>
+          <HomeScreen serverState={serverState} onSelect={handleSelectMode} />
+        </div>
+      )}
+
       {screen === 'cpu' && (
         <div style={W}>
           <CPUBracketScreen
@@ -3353,6 +3473,8 @@ export default function App() {
             tournamentCode={serverState?.tournamentCode || localStorage.getItem('psc_tcode')}
             tournamentName={serverState?.tournamentName || localStorage.getItem('psc_tname')}
             startManaging={startManaging}
+            initialSwMode={initialSwMode}
+            onHome={handleHome}
             onLeave={() => {
               setMyCode(null);
               localStorage.removeItem('psc_code');
