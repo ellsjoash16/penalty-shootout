@@ -2433,16 +2433,41 @@ function SweepstakeAdminPanel({ sweepstake, onClose }) {
   );
 }
 
+const DEMO_SWEEPSTAKE = {
+  participants: [
+    { name: 'James', teams: ['France', 'Colombia', 'Egypt', 'Haiti'] },
+    { name: 'Sarah', teams: ['Argentina', 'Senegal', 'Austria', 'Saudi Arabia'] },
+    { name: 'Mike', teams: ['England', 'Mexico', 'South Korea', 'Jordan'] },
+    { name: 'Priya', teams: ['Spain', 'Germany', 'Japan', 'Ghana'] },
+    { name: 'Tom', teams: ['Brazil', 'Croatia', 'Iran', 'New Zealand'] },
+    { name: 'Elliot', teams: ['Portugal', 'Uruguay', 'Canada', 'Cape Verde'] },
+  ],
+  teamData: {
+    France:    { reached: 'winner',    groupPts: 7 },
+    Colombia:  { reached: 'sf',        groupPts: 6 },
+    England:   { reached: 'runner_up', groupPts: 7 },
+    Argentina: { reached: 'qf',        groupPts: 5 },
+    Spain:     { reached: 'sf',        groupPts: 9 },
+    Brazil:    { reached: 'r16',       groupPts: 4 },
+    Portugal:  { reached: 'qf',        groupPts: 6 },
+    Germany:   { reached: 'r16',       groupPts: 5 },
+    Mexico:    { reached: 'r32',       groupPts: 3 },
+    Japan:     { reached: 'r16',       groupPts: 6 },
+    Iran:      { reached: 'r32',       groupPts: 1 },
+    Canada:    { reached: 'r32',       groupPts: 2 },
+    Senegal:   { reached: 'r16',       groupPts: 5 },
+    Croatia:   { reached: 'r32',       groupPts: 3 },
+    Austria:   { reached: 'r32',       groupPts: 4 },
+    Egypt:     { groupPts: 1 },
+    'South Korea': { groupPts: 3 },
+  },
+};
+
 function SweepstakeLeaderboard({ sweepstake }) {
   const [expanded, setExpanded] = useState(null);
-  const { participants = [], teamData = {} } = sweepstake || {};
-
-  if (!participants.length) return (
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'50vh',gap:8,opacity:0.45}}>
-      <div style={{color:'#fff',fontSize:14,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.1em',textTransform:'uppercase'}}>Sweepstake Not Started</div>
-      <div style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>Admin will add participants and assign teams</div>
-    </div>
-  );
+  const raw = sweepstake?.participants?.length ? sweepstake : DEMO_SWEEPSTAKE;
+  const { participants = [], teamData = {} } = raw;
+  const isDemo = !sweepstake?.participants?.length;
 
   const ranked = [...participants]
     .map(p => ({ ...p, pts: swParticipantPts(p, teamData) }))
@@ -2457,6 +2482,13 @@ function SweepstakeLeaderboard({ sweepstake }) {
 
   return (
     <div style={{maxWidth:600,margin:'0 auto',padding:'10px 12px 40px',display:'flex',flexDirection:'column',gap:6}}>
+
+      {/* Demo banner */}
+      {isDemo && (
+        <div style={{background:'rgba(255,215,0,0.08)',border:'1px solid rgba(255,215,0,0.2)',borderRadius:8,padding:'6px 12px',textAlign:'center'}}>
+          <span style={{color:'#ffd700',fontSize:10,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase'}}>Preview — demo data</span>
+        </div>
+      )}
 
       {/* Scoring key */}
       <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:8,padding:'8px 12px',marginBottom:2}}>
