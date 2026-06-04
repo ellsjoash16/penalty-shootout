@@ -16,6 +16,35 @@ const ZONE_ICONS = { tl:'↖', tc:'↑', tr:'↗', bl:'↙', bc:'↓', br:'↘' 
 const TOTAL_KICKS = 6;
 const CHOOSE_TIME = 9; // seconds shown on client countdown
 
+// ─── SWEEPSTAKE ───────────────────────────────────────────────────────────────
+const SWEEPSTAKE_TIERS = [
+  { tier:1, label:'Elite',       color:'#ffd700', teams:['France','Spain','Argentina','England','Portugal','Brazil','Netherlands','Morocco'] },
+  { tier:2, label:'Contenders',  color:'#00c853', teams:['Belgium','Germany','Croatia','Colombia','Senegal','Mexico','United States','Uruguay'] },
+  { tier:3, label:'Strong',      color:'#2196f3', teams:['Japan','Switzerland','Norway','Australia','Türkiye','Austria','Ecuador','Sweden'] },
+  { tier:4, label:'Competitive', color:'#ff9800', teams:['Iran','Scotland','Egypt','Panama','Ivory Coast','Canada','Algeria','Paraguay'] },
+  { tier:5, label:'Underdogs',   color:'#9c27b0', teams:['South Korea','Tunisia','Czechia','DR Congo','Uzbekistan','South Africa','Iraq','Qatar'] },
+  { tier:6, label:'Dark Horses', color:'#607d8b', teams:['Saudi Arabia','Jordan','Bosnia & Herzegovina','Cape Verde','Ghana','Curaçao','Haiti','New Zealand'] },
+];
+const ALL_WC_TEAMS   = SWEEPSTAKE_TIERS.flatMap(t => t.teams);
+const TEAM_TIER_MAP  = Object.fromEntries(SWEEPSTAKE_TIERS.flatMap(({ tier, color, teams }) => teams.map(t => [t, { tier, color }])));
+const SW_ROUNDS      = ['r32','r16','qf','sf','runner_up','winner'];
+const SW_ROUND_PTS   = { r32:5, r16:10, qf:20, sf:35, runner_up:50, winner:100 };
+const SW_ROUND_LABELS = { r32:'Round of 32', r16:'Round of 16', qf:'Quarter-Final', sf:'Semi-Final', runner_up:'Runner-up', winner:'Winner' };
+const SW_ROUND_SHORT  = { r32:'R32', r16:'R16', qf:'QF', sf:'SF', runner_up:'Final', winner:'WINNER' };
+const swTeamPts = td => {
+  if (!td) return 0;
+  let pts = td.groupPts || 0;
+  const idx = SW_ROUNDS.indexOf(td.reached);
+  if (idx >= 0) for (let i = 0; i <= idx; i++) pts += SW_ROUND_PTS[SW_ROUNDS[i]];
+  if (td.topScorer) pts += 15;
+  if (td.cleanSheetFinal) pts += 10;
+  pts += (td.upsets || 0) * 10;
+  pts += (td.firstGoals || 0) * 2;
+  return pts;
+};
+const swParticipantPts = (p, teamData) =>
+  (p.teams || []).reduce((sum, t) => sum + swTeamPts(teamData?.[t]), 0);
+
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════
@@ -2172,10 +2201,366 @@ function TeamPicker({ bracket, playerName: initialPlayerName, onPicked }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SWEEPSTAKE COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function TeamProgressEditor({ team, td, color, onSave }) {
+  const [groupPts, setGroupPts]   = useState(td?.groupPts ?? 0);
+  const [reached, setReached]     = useState(td?.reached ?? '');
+  const [topScorer, setTopScorer] = useState(td?.topScorer ?? false);
+  const [cleanSheet, setCleanSheet] = useState(td?.cleanSheetFinal ?? false);
+  const [upsets, setUpsets]       = useState(td?.upsets ?? 0);
+  const [firstGoals, setFirstGoals] = useState(td?.firstGoals ?? 0);
+
+  return (
+    <div style={{padding:'8px 10px 10px',borderTop:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',gap:8}}>
+      <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}}>
+        <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{color:'rgba(255,255,255,0.4)',fontSize:10,flexShrink:0}}>Group pts</span>
+          <input type="number" min={0} value={groupPts}
+            onChange={e => setGroupPts(parseInt(e.target.value)||0)}
+            onBlur={() => onSave({ groupPts })}
+            style={{width:52,padding:'3px 7px',borderRadius:5,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',color:'#fff',fontSize:12,fontFamily:"'DM Sans',system-ui,sans-serif",outline:'none'}}/>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:5,flex:1,minWidth:140}}>
+          <span style={{color:'rgba(255,255,255,0.4)',fontSize:10,flexShrink:0}}>Reached</span>
+          <select value={reached} onChange={e => { setReached(e.target.value); onSave({ reached: e.target.value || null }); }}
+            style={{flex:1,padding:'3px 5px',borderRadius:5,background:'#0a1628',border:'1px solid rgba(255,255,255,0.15)',color:'#fff',fontSize:10,fontFamily:"'DM Sans',system-ui,sans-serif",outline:'none'}}>
+            <option value="">Group stage only</option>
+            {SW_ROUNDS.map(r => <option key={r} value={r}>{SW_ROUND_LABELS[r]}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:'4px 14px',alignItems:'center'}}>
+        {[[topScorer,setTopScorer,'topScorer','Top scorer +15'],[cleanSheet,setCleanSheet,'cleanSheetFinal','Clean sheet final +10']].map(([val,set,key,label]) => (
+          <label key={key} style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}>
+            <input type="checkbox" checked={!!val} onChange={e => { set(e.target.checked); onSave({[key]:e.target.checked}); }} style={{accentColor:color}}/>
+            <span style={{color:'rgba(255,255,255,0.45)',fontSize:10}}>{label}</span>
+          </label>
+        ))}
+        <div style={{display:'flex',alignItems:'center',gap:4}}>
+          <span style={{color:'rgba(255,255,255,0.4)',fontSize:10}}>Upsets</span>
+          <input type="number" min={0} value={upsets}
+            onChange={e => setUpsets(parseInt(e.target.value)||0)}
+            onBlur={() => onSave({ upsets })}
+            style={{width:38,padding:'2px 5px',borderRadius:4,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',color:'#fff',fontSize:11,fontFamily:"'DM Sans',system-ui,sans-serif",outline:'none'}}/>
+          <span style={{color:'rgba(255,255,255,0.3)',fontSize:9}}>×10</span>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:4}}>
+          <span style={{color:'rgba(255,255,255,0.4)',fontSize:10}}>1st goals</span>
+          <input type="number" min={0} value={firstGoals}
+            onChange={e => setFirstGoals(parseInt(e.target.value)||0)}
+            onBlur={() => onSave({ firstGoals })}
+            style={{width:38,padding:'2px 5px',borderRadius:4,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',color:'#fff',fontSize:11,fontFamily:"'DM Sans',system-ui,sans-serif",outline:'none'}}/>
+          <span style={{color:'rgba(255,255,255,0.3)',fontSize:9}}>×2</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SweepstakeAdminPanel({ sweepstake, onClose }) {
+  const [tab, setTab]               = useState('participants');
+  const [newName, setNewName]       = useState('');
+  const [busy, setBusy]             = useState(false);
+  const [editingP, setEditingP]     = useState(null);
+  const [editTeams, setEditTeams]   = useState([]);
+  const [expandedTeam, setExpandedTeam] = useState(null);
+
+  const { participants = [], teamData = {} } = sweepstake || {};
+
+  const addParticipant = async () => {
+    const n = newName.trim();
+    if (!n || busy) return;
+    setBusy(true);
+    await api('/api/sweepstake/assign', { participantName: n, teams: [] });
+    setNewName(''); setBusy(false);
+  };
+
+  const removeParticipant = async name => {
+    setBusy(true);
+    await api('/api/sweepstake/remove-participant', { participantName: name });
+    setBusy(false);
+  };
+
+  const saveParticipantTeams = async () => {
+    if (!editingP) return;
+    setBusy(true);
+    await api('/api/sweepstake/assign', { participantName: editingP, teams: editTeams });
+    setEditingP(null); setBusy(false);
+  };
+
+  const toggleTeam = team => setEditTeams(prev => prev.includes(team) ? prev.filter(t => t !== team) : [...prev, team]);
+
+  const saveTeamData = async (team, updates) => {
+    await api('/api/sweepstake/update-team', { team, ...updates });
+  };
+
+  const assignedByOther = name => participants.filter(p => p.name !== name).flatMap(p => p.teams || []);
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:10002,background:'rgba(0,0,0,0.88)',overflowY:'auto'}} onClick={onClose}>
+      <div style={{minHeight:'100%',maxWidth:520,margin:'0 auto',padding:'16px',display:'flex',flexDirection:'column',gap:12}} onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <h2 style={{color:'#fff',fontSize:16,fontWeight:900,margin:0,letterSpacing:'0.05em'}}>Sweepstake</h2>
+            <p style={{color:'rgba(255,255,255,0.4)',fontSize:11,margin:'2px 0 0'}}>
+              {participants.length} participants · {new Set(participants.flatMap(p => p.teams||[])).size}/48 teams assigned
+            </p>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:20,cursor:'pointer',lineHeight:1}}>✕</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.05)',borderRadius:8,padding:3}}>
+          {[['participants','Participants'],['teams','Teams']].map(([id,label]) => (
+            <button key={id} onClick={() => setTab(id)} style={{
+              flex:1,padding:'7px',borderRadius:6,border:'none',cursor:'pointer',
+              background:tab===id?'rgba(0,200,83,0.2)':'transparent',
+              color:tab===id?'#00c853':'rgba(255,255,255,0.45)',
+              fontSize:11,fontWeight:700,letterSpacing:'0.05em',
+              fontFamily:"'DM Sans',system-ui,sans-serif",
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {/* ── Participants tab ── */}
+        {tab === 'participants' && (<>
+          <div style={{display:'flex',gap:8}}>
+            <input placeholder="Participant name" value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addParticipant()}
+              style={{flex:1,padding:'8px 10px',borderRadius:7,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',color:'#fff',fontSize:13,fontFamily:"'DM Sans',system-ui,sans-serif",outline:'none'}}/>
+            <button onClick={addParticipant} disabled={busy||!newName.trim()} style={{padding:'8px 14px',borderRadius:7,background:'#00c853',border:'none',color:'#000',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:"'DM Sans',system-ui,sans-serif",opacity:newName.trim()?1:0.5}}>Add</button>
+          </div>
+
+          {participants.map(p => (
+            <div key={p.name} style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px'}}>
+                <span style={{color:'#fff',fontSize:13,fontWeight:700,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</span>
+                <span style={{color:'rgba(255,255,255,0.3)',fontSize:10,flexShrink:0}}>{(p.teams||[]).length} teams</span>
+                <button onClick={() => { setEditingP(p.name); setEditTeams([...(p.teams||[])]); }}
+                  style={{background:'rgba(0,200,83,0.15)',border:'1px solid rgba(0,200,83,0.3)',color:'#00c853',fontSize:10,fontWeight:700,padding:'3px 8px',borderRadius:5,cursor:'pointer',fontFamily:"'DM Sans',system-ui,sans-serif",flexShrink:0}}>Edit teams</button>
+                <button onClick={() => removeParticipant(p.name)}
+                  style={{background:'rgba(255,23,68,0.1)',border:'1px solid rgba(255,23,68,0.25)',color:'#ff1744',fontSize:10,fontWeight:700,padding:'3px 8px',borderRadius:5,cursor:'pointer',fontFamily:"'DM Sans',system-ui,sans-serif",flexShrink:0}}>Remove</button>
+              </div>
+              {(p.teams||[]).length > 0 && (
+                <div style={{padding:'0 12px 10px',display:'flex',flexWrap:'wrap',gap:4}}>
+                  {(p.teams||[]).map(t => {
+                    const ti = TEAM_TIER_MAP[t];
+                    const pts = swTeamPts(teamData[t]);
+                    return (
+                      <span key={t} style={{fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:4,background:`${ti?.color||'#666'}22`,color:ti?.color||'#aaa',border:`1px solid ${ti?.color||'#666'}44`}}>
+                        {t}{pts > 0 ? ` ${pts}pts` : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </>)}
+
+        {/* ── Teams tab ── */}
+        {tab === 'teams' && SWEEPSTAKE_TIERS.map(({ tier, label, color, teams }) => (
+          <div key={tier} style={{display:'flex',flexDirection:'column',gap:3}}>
+            <div style={{color:color,fontSize:9,letterSpacing:'0.2em',fontWeight:700,textTransform:'uppercase',fontFamily:"'DM Sans',system-ui,sans-serif",marginBottom:1}}>Tier {tier} — {label}</div>
+            {teams.map(team => {
+              const td   = teamData[team] || {};
+              const owner = participants.find(p => p.teams?.includes(team));
+              const isOpen = expandedTeam === team;
+              return (
+                <div key={team} style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${isOpen?color+'55':'rgba(255,255,255,0.07)'}`,borderRadius:8,overflow:'hidden',transition:'border-color 0.15s'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',cursor:'pointer'}} onClick={() => setExpandedTeam(t => t===team?null:team)}>
+                    <div style={{width:6,height:6,borderRadius:1,background:color,flexShrink:0}}/>
+                    <span style={{color:'#fff',fontSize:12,fontWeight:600,flex:1}}>{team}</span>
+                    {owner && <span style={{color:'rgba(255,255,255,0.35)',fontSize:10,flexShrink:0}}>{owner.name}</span>}
+                    {td.reached && <span style={{color:color,fontSize:10,fontWeight:700,flexShrink:0}}>{SW_ROUND_SHORT[td.reached]}</span>}
+                    {!td.reached && td.groupPts > 0 && <span style={{color:'rgba(255,255,255,0.3)',fontSize:10,flexShrink:0}}>{td.groupPts}pts</span>}
+                  </div>
+                  {isOpen && (
+                    <TeamProgressEditor key={`${team}-editor`} team={team} td={td} color={color} onSave={updates => saveTeamData(team, updates)}/>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Edit participant teams overlay */}
+      {editingP && (
+        <div style={{position:'fixed',inset:0,zIndex:10003,background:'rgba(0,0,0,0.9)',overflowY:'auto'}} onClick={() => setEditingP(null)}>
+          <div style={{maxWidth:480,margin:'0 auto',padding:'20px 16px',display:'flex',flexDirection:'column',gap:12,width:'100%'}} onClick={e => e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <h3 style={{color:'#fff',fontSize:14,fontWeight:900,margin:0}}>Assign Teams</h3>
+                <p style={{color:'rgba(255,255,255,0.4)',fontSize:11,margin:'2px 0 0'}}>{editingP} · {editTeams.length} assigned</p>
+              </div>
+              <button onClick={saveParticipantTeams} style={{background:'#00c853',border:'none',color:'#000',fontSize:12,fontWeight:800,padding:'8px 16px',borderRadius:7,cursor:'pointer',fontFamily:"'DM Sans',system-ui,sans-serif"}}>Save</button>
+            </div>
+            <p style={{color:'rgba(255,255,255,0.35)',fontSize:10,margin:0}}>Tap to assign/remove. Greyed = assigned to someone else.</p>
+            {SWEEPSTAKE_TIERS.map(({ tier, label, color, teams }) => (
+              <div key={tier}>
+                <div style={{color:color,fontSize:9,letterSpacing:'0.18em',fontWeight:700,textTransform:'uppercase',marginBottom:5}}>Tier {tier} — {label}</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                  {teams.map(team => {
+                    const selected   = editTeams.includes(team);
+                    const takenByOther = assignedByOther(editingP).includes(team);
+                    return (
+                      <button key={team} onClick={() => !takenByOther && toggleTeam(team)} disabled={takenByOther} style={{
+                        padding:'4px 9px',borderRadius:6,fontSize:11,fontWeight:700,
+                        cursor:takenByOther?'default':'pointer',
+                        background:selected?`${color}33`:takenByOther?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.06)',
+                        border:selected?`1.5px solid ${color}`:`1px solid ${takenByOther?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.15)'}`,
+                        color:selected?color:takenByOther?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.7)',
+                        fontFamily:"'DM Sans',system-ui,sans-serif",
+                        transition:'all 0.1s',
+                      }}>
+                        {selected && '✓ '}{team}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SweepstakeLeaderboard({ sweepstake }) {
+  const [expanded, setExpanded] = useState(null);
+  const { participants = [], teamData = {} } = sweepstake || {};
+
+  if (!participants.length) return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'50vh',gap:8,opacity:0.45}}>
+      <div style={{color:'#fff',fontSize:14,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.1em',textTransform:'uppercase'}}>Sweepstake Not Started</div>
+      <div style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>Admin will add participants and assign teams</div>
+    </div>
+  );
+
+  const ranked = [...participants]
+    .map(p => ({ ...p, pts: swParticipantPts(p, teamData) }))
+    .sort((a, b) => b.pts - a.pts);
+
+  const progressRows = SW_ROUNDS.map(r => ({
+    round: r,
+    teams: ALL_WC_TEAMS.filter(t => SW_ROUNDS.indexOf(teamData[t]?.reached) >= SW_ROUNDS.indexOf(r)),
+  })).filter(row => row.teams.length > 0);
+
+  const medalColor = i => i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : null;
+
+  return (
+    <div style={{maxWidth:600,margin:'0 auto',padding:'10px 12px 40px',display:'flex',flexDirection:'column',gap:6}}>
+
+      {/* Scoring key */}
+      <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:8,padding:'8px 12px',marginBottom:2}}>
+        <div style={{color:'rgba(255,255,255,0.3)',fontSize:8,letterSpacing:'0.2em',textTransform:'uppercase',fontWeight:700,marginBottom:4}}>Points</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:'3px 10px'}}>
+          {[['Group Win','3'],['Draw','1'],['R32','5'],['R16','10'],['QF','20'],['SF','35'],['Runner-up','50'],['Winner','100'],['Top scorer','+15'],['Clean sheet final','+10'],['Upset win','+10'],['First goal','+2']].map(([k,v]) => (
+            <span key={k} style={{fontSize:9,color:'rgba(255,255,255,0.35)'}}>
+              <span style={{color:'rgba(255,255,255,0.6)',fontWeight:600}}>{k}</span> {v}pts
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Leaderboard */}
+      {ranked.map((p, i) => {
+        const mc = medalColor(i);
+        const isOpen = expanded === p.name;
+        return (
+          <div key={p.name}
+            onClick={() => setExpanded(e => e === p.name ? null : p.name)}
+            style={{
+              background:'rgba(255,255,255,0.04)',
+              border:`1px solid ${isOpen?'rgba(0,200,83,0.3)':'rgba(255,255,255,0.08)'}`,
+              borderRadius:10,overflow:'hidden',cursor:'pointer',transition:'border-color 0.15s',
+            }}
+          >
+            <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px'}}>
+              <div style={{
+                width:28,height:28,borderRadius:'50%',flexShrink:0,
+                background:mc?`${mc}22`:'rgba(255,255,255,0.05)',
+                border:`1.5px solid ${mc||'rgba(255,255,255,0.15)'}`,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:11,fontWeight:900,color:mc||'rgba(255,255,255,0.4)',
+                fontFamily:"'Big Shoulders Display',sans-serif",
+              }}>{i+1}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:'#fff',fontSize:13,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:3}}>
+                  {(p.teams||[]).map(t => {
+                    const ti = TEAM_TIER_MAP[t];
+                    const td = teamData[t];
+                    return (
+                      <span key={t} style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:3,background:`${ti?.color||'#666'}22`,color:ti?.color||'#aaa',border:`1px solid ${ti?.color||'#666'}33`}}>
+                        {t}{td?.reached ? ` · ${SW_ROUND_SHORT[td.reached]}` : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <div style={{color:'#00c853',fontSize:22,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",lineHeight:1}}>{p.pts}</div>
+                <div style={{color:'rgba(255,255,255,0.3)',fontSize:8,letterSpacing:'0.1em'}}>PTS</div>
+              </div>
+            </div>
+            {isOpen && (
+              <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',padding:'8px 12px',display:'flex',flexDirection:'column',gap:5}}>
+                {(p.teams||[]).map(t => {
+                  const ti  = TEAM_TIER_MAP[t];
+                  const td  = teamData[t];
+                  const pts = swTeamPts(td);
+                  return (
+                    <div key={t} style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{width:7,height:7,borderRadius:1,background:ti?.color||'#666',flexShrink:0}}/>
+                      <span style={{color:'rgba(255,255,255,0.8)',fontSize:11,fontWeight:600,flex:1}}>{t}</span>
+                      <span style={{color:'rgba(255,255,255,0.35)',fontSize:10}}>{td?.reached ? SW_ROUND_LABELS[td.reached] : td?.groupPts ? 'Group stage' : 'No pts yet'}</span>
+                      <span style={{color:'#00c853',fontSize:12,fontWeight:800,fontFamily:"'Big Shoulders Display',sans-serif",minWidth:32,textAlign:'right'}}>{pts}pts</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Tournament progression */}
+      {progressRows.length > 0 && (
+        <div style={{marginTop:8,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+          <div style={{color:'rgba(255,255,255,0.3)',fontSize:8,letterSpacing:'0.2em',textTransform:'uppercase',fontWeight:700}}>Tournament Progression</div>
+          {progressRows.map(({ round, teams }) => (
+            <div key={round} style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+              <span style={{color:'rgba(255,255,255,0.3)',fontSize:9,fontWeight:700,letterSpacing:'0.08em',width:58,flexShrink:0,paddingTop:2}}>{SW_ROUND_SHORT[round]}</span>
+              <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+                {teams.map(t => {
+                  const ti    = TEAM_TIER_MAP[t];
+                  const owner = participants.find(p => p.teams?.includes(t));
+                  return (
+                    <span key={t} title={owner?.name} style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:3,background:`${ti?.color||'#666'}22`,color:ti?.color||'#aaa',border:`1px solid ${ti?.color||'#666'}33`}}>{t}</span>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TOURNAMENT SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, tournamentCode, tournamentName, startManaging, onLeave, onLogout, onDeleteTournament, onCPU, onJoined, onAdminLogin, onTournamentCreated, onCodeEntered }) {
+function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tournamentCode, tournamentName, startManaging, onLeave, onLogout, onDeleteTournament, onCPU, onJoined, onAdminLogin, onTournamentCreated, onCodeEntered }) {
   const [submitMatch] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -2204,6 +2589,8 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, tournamentCode,
   })();
   const [menuOpen, setMenuOpen] = useState(false);
   const [managing, setManaging] = useState(!!startManaging);
+  const [swMode, setSwMode] = useState('bracket');
+  const [managingSweepstake, setManagingSweepstake] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
   const [winnerSelections, setWinnerSelections] = useState({});
 
@@ -2338,6 +2725,14 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, tournamentCode,
                   if (res.error) alert(res.error);
                 }}>
                   Seed FIFA Nations
+                </Button>
+              </SheetClose>
+            )}
+
+            {isAdmin && (
+              <SheetClose asChild>
+                <Button variant="ghost" className="justify-start rounded-none h-12 px-5 text-sm font-medium" style={{color:'#ffd700'}} onClick={() => setManagingSweepstake(true)}>
+                  Sweepstake
                 </Button>
               </SheetClose>
             )}
@@ -2631,9 +3026,25 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, tournamentCode,
             {tournamentCode && <span style={{color:'#00c853',fontFamily:"'DM Sans',system-ui,sans-serif",fontSize:14,letterSpacing:'0.2em',fontWeight:800,lineHeight:1}}>{tournamentCode}</span>}
           </div>
         </div>
+        {/* Mode tabs */}
+        <div style={{display:'flex',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+          {[['bracket','Bracket'],['sweepstake','Sweepstake']].map(([mode,label]) => (
+            <button key={mode} onClick={() => setSwMode(mode)} style={{
+              flex:1,padding:'8px 0',border:'none',cursor:'pointer',background:'transparent',
+              fontSize:9,fontWeight:800,letterSpacing:'0.18em',textTransform:'uppercase',
+              color:swMode===mode?'#00c853':'rgba(255,255,255,0.3)',
+              borderBottom:`2px solid ${swMode===mode?'#00c853':'transparent'}`,
+              fontFamily:"'DM Sans',system-ui,sans-serif",transition:'color 0.15s',
+            }}>{label}</button>
+          ))}
+        </div>
       </div>
 
+      {/* Sweepstake leaderboard */}
+      {swMode === 'sweepstake' && <SweepstakeLeaderboard sweepstake={sweepstake}/>}
+
       {/* Bracket tree + admin URL panel */}
+      {swMode === 'bracket' && (<>
       {bracket ? (
         <div style={{display:'flex',alignItems:'flex-start'}}>
           <div style={{flex:1,minWidth:0}}>
@@ -2677,6 +3088,8 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, tournamentCode,
           {isAdmin && <div style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>Create one via the menu</div>}
         </div>
       )}
+
+      </>)}
 
       {needsPick && (
         <TeamPicker
@@ -2725,6 +3138,9 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, tournamentCode,
             </button>
           </div>
         </div>
+      )}
+      {managingSweepstake && (
+        <SweepstakeAdminPanel sweepstake={sweepstake} onClose={() => setManagingSweepstake(false)}/>
       )}
     </div>
   );
@@ -2933,6 +3349,7 @@ export default function App() {
             myCode={myCode}
             setMyCode={setMyCode}
             isAdmin={adminSession}
+            sweepstake={serverState?.sweepstake}
             tournamentCode={serverState?.tournamentCode || localStorage.getItem('psc_tcode')}
             tournamentName={serverState?.tournamentName || localStorage.getItem('psc_tname')}
             startManaging={startManaging}
