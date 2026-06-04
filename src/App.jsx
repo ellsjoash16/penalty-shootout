@@ -2573,7 +2573,7 @@ function HomeScreen({ serverState, onSelect }) {
   return (
     <div className="h-full overflow-y-auto flex flex-col items-center justify-center p-6 gap-6 relative">
       <StadiumBg/>
-      <div className="relative z-10 w-full max-w-2xl flex flex-col items-center gap-5 px-4">
+      <div className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-5 px-6">
         <p style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:'0.4em',textTransform:'uppercase',fontWeight:700}}>
           DAF World Cup 2026
         </p>
@@ -2585,11 +2585,11 @@ function HomeScreen({ serverState, onSelect }) {
             className="cursor-pointer transition-transform duration-150 hover:-translate-y-1"
             style={{background:'rgba(4,16,32,0.85)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'4px solid #00c853',borderRadius:14}}
           >
-            <CardContent className="p-9 flex flex-col gap-5" style={{minHeight:280}}>
-              <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:48,fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
+            <CardContent className="p-10 flex flex-col gap-6" style={{minHeight:360}}>
+              <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:72,fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
                 Penalties
               </span>
-              <span style={{color:'rgba(255,255,255,0.4)',fontSize:13,lineHeight:1.6,flex:1}}>
+              <span style={{color:'rgba(255,255,255,0.4)',fontSize:15,lineHeight:1.6,flex:1}}>
                 Penalty shootout bracket tournament
               </span>
               <Badge
@@ -2607,11 +2607,11 @@ function HomeScreen({ serverState, onSelect }) {
             className="cursor-pointer transition-transform duration-150 hover:-translate-y-1"
             style={{background:'rgba(4,16,32,0.85)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'4px solid #ffd700',borderRadius:14}}
           >
-            <CardContent className="p-9 flex flex-col gap-5" style={{minHeight:280}}>
-              <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:48,fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
+            <CardContent className="p-10 flex flex-col gap-6" style={{minHeight:360}}>
+              <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:72,fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
                 Sweepstake
               </span>
-              <span style={{color:'rgba(255,255,255,0.4)',fontSize:13,lineHeight:1.6,flex:1}}>
+              <span style={{color:'rgba(255,255,255,0.4)',fontSize:15,lineHeight:1.6,flex:1}}>
                 World Cup team draw &amp; live leaderboard
               </span>
               {swLeader
