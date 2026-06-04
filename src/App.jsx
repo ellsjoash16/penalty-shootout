@@ -1,4 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Component } from "react";
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) return (
+      <div style={{color:'#ff4444',padding:24,fontFamily:'monospace',fontSize:12,background:'#0a0a0a',minHeight:'100%'}}>
+        <b>Render error:</b><br/>{this.state.error.message}<br/><pre style={{marginTop:8,opacity:0.6,whiteSpace:'pre-wrap'}}>{this.state.error.stack}</pre>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -3163,7 +3176,7 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tou
       </div>
 
       {/* Sweepstake leaderboard */}
-      {swMode === 'sweepstake' && <SweepstakeLeaderboard sweepstake={sweepstake}/>}
+      {swMode === 'sweepstake' && <ErrorBoundary><SweepstakeLeaderboard sweepstake={sweepstake}/></ErrorBoundary>}
 
       {/* Bracket tree + admin URL panel */}
       {swMode === 'bracket' && (<>
