@@ -2481,6 +2481,7 @@ function SweepstakeLeaderboard({ sweepstake }) {
   const medalColor = i => i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : null;
 
   return (
+    <div style={{minHeight:'100%',background:'#030d1a'}}>
     <div style={{maxWidth:600,margin:'0 auto',padding:'10px 12px 40px',display:'flex',flexDirection:'column',gap:6}}>
 
       {/* Demo banner */}
@@ -2584,6 +2585,7 @@ function SweepstakeLeaderboard({ sweepstake }) {
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 }
