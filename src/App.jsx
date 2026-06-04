@@ -2681,7 +2681,6 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tou
   // Code entry — shown when no local tournament code saved and user isn't admin
   const [codeInput, setCodeInput] = useState('');
   const [codeErr, setCodeErr] = useState('');
-  const needsCode = !isAdmin && !localStorage.getItem('psc_tcode') && swMode !== 'sweepstake';
 
   const submitCode = () => {
     const c = codeInput.trim().toUpperCase();
@@ -2705,6 +2704,7 @@ function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, sweepstake, tou
   const [managing, setManaging] = useState(!!startManaging);
   const [swMode, setSwMode] = useState(initialSwMode || 'bracket');
   useEffect(() => { setSwMode(initialSwMode || 'bracket'); }, [initialSwMode]);
+  const needsCode = !isAdmin && !localStorage.getItem('psc_tcode') && swMode !== 'sweepstake';
   const [managingSweepstake, setManagingSweepstake] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
   const [winnerSelections, setWinnerSelections] = useState({});
