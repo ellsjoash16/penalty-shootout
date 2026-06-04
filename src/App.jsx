@@ -2576,7 +2576,7 @@ function HomeScreen({ serverState, onSelect }) {
 
       {/* Header */}
       <div className="relative z-10 flex items-center gap-4 px-6 pt-5 pb-4">
-        <img src="/daf-logo.png" style={{height:48,objectFit:'contain',filter:'drop-shadow(0 0 16px rgba(0,200,83,0.4))'}} draggable={false} alt=""/>
+        <img src="/daf-logo.png" style={{height:80,objectFit:'contain',filter:'drop-shadow(0 0 16px rgba(0,200,83,0.4))'}} draggable={false} alt=""/>
         <div className="flex flex-col">
           <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:26,fontWeight:900,letterSpacing:'0.05em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>DAF World Cup 2026</span>
           <span style={{color:'rgba(255,255,255,0.35)',fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',fontWeight:600}}>Select a mode</span>
