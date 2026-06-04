@@ -2571,31 +2571,24 @@ function HomeScreen({ serverState, onSelect }) {
     : null;
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden">
+    <div className="h-full relative overflow-hidden">
       <StadiumBg/>
-      <div className="relative z-10 w-full h-full flex flex-col gap-4 p-5">
-        <p style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:'0.4em',textTransform:'uppercase',fontWeight:700,textAlign:'center'}}>
-          DAF World Cup 2026
-        </p>
-
+      <div className="relative z-10 w-full h-full grid grid-cols-2 gap-4 p-5">
         {/* Penalties card */}
         <Card
           onClick={() => onSelect('bracket')}
-          className="cursor-pointer transition-transform duration-150 hover:-translate-y-1 flex-1"
+          className="cursor-pointer transition-transform duration-150 hover:-translate-y-1"
           style={{background:'rgba(4,16,32,0.88)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'4px solid #00c853',borderRadius:16}}
         >
           <CardContent className="p-10 h-full flex flex-col justify-between">
-            <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:80,fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
+            <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:'clamp(40px,5vw,96px)',fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
               Penalties
             </span>
-            <div className="flex items-end justify-between gap-4">
-              <span style={{color:'rgba(255,255,255,0.4)',fontSize:15,lineHeight:1.5,maxWidth:360}}>
+            <div className="flex flex-col gap-3">
+              <span style={{color:'rgba(255,255,255,0.4)',fontSize:14,lineHeight:1.5}}>
                 Penalty shootout bracket tournament
               </span>
-              <Badge
-                variant={!!bracket && stage !== 'champion' ? 'default' : 'outline'}
-                className="w-fit text-[12px] tracking-wide px-3 py-1 shrink-0"
-              >
+              <Badge variant={!!bracket && stage !== 'champion' ? 'default' : 'outline'} className="w-fit text-[12px] tracking-wide px-3 py-1">
                 {stageLabel || (bracket ? 'Active' : 'No tournament')}
               </Badge>
             </div>
@@ -2605,22 +2598,22 @@ function HomeScreen({ serverState, onSelect }) {
         {/* Sweepstake card */}
         <Card
           onClick={() => onSelect('sweepstake')}
-          className="cursor-pointer transition-transform duration-150 hover:-translate-y-1 flex-1"
+          className="cursor-pointer transition-transform duration-150 hover:-translate-y-1"
           style={{background:'rgba(4,16,32,0.88)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'4px solid #ffd700',borderRadius:16}}
         >
           <CardContent className="p-10 h-full flex flex-col justify-between">
-            <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:80,fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
+            <span style={{fontFamily:"'Big Shoulders Display',sans-serif",fontSize:'clamp(40px,5vw,96px)',fontWeight:900,letterSpacing:'0.03em',textTransform:'uppercase',color:'#fff',lineHeight:1}}>
               Sweepstake
             </span>
-            <div className="flex items-end justify-between gap-4">
-              <span style={{color:'rgba(255,255,255,0.4)',fontSize:15,lineHeight:1.5,maxWidth:360}}>
+            <div className="flex flex-col gap-3">
+              <span style={{color:'rgba(255,255,255,0.4)',fontSize:14,lineHeight:1.5}}>
                 World Cup team draw &amp; live leaderboard
               </span>
               {swLeader
-                ? <Badge variant="outline" className="w-fit text-[12px] tracking-wide px-3 py-1 shrink-0" style={{color:'#ffd700',borderColor:'rgba(255,215,0,0.35)'}}>
+                ? <Badge variant="outline" className="w-fit text-[12px] tracking-wide px-3 py-1" style={{color:'#ffd700',borderColor:'rgba(255,215,0,0.35)'}}>
                     {swLeader.name}
                   </Badge>
-                : <Badge variant="outline" className="w-fit text-[12px] tracking-wide px-3 py-1 shrink-0">
+                : <Badge variant="outline" className="w-fit text-[12px] tracking-wide px-3 py-1">
                     {swParts ? `${swParts} players` : 'Not started'}
                   </Badge>
               }
