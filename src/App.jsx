@@ -2560,96 +2560,60 @@ function SweepstakeLeaderboard({ sweepstake }) {
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function HomePanel({ title, desc, accent, status, statusLit, onClick }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      onTouchStart={() => setHov(true)} onTouchEnd={() => setHov(false)}
-      style={{
-        flex:'1 1 200px', maxWidth:260, minHeight:200,
-        background:'rgba(4,16,32,0.92)',
-        border:`1px solid ${hov ? accent+'55' : 'rgba(255,255,255,0.09)'}`,
-        borderTop:`3px solid ${accent}`,
-        borderRadius:16, padding:'26px 22px 20px',
-        display:'flex', flexDirection:'column', gap:10,
-        cursor:'pointer', textAlign:'left',
-        boxShadow: hov
-          ? `0 0 48px ${accent}18, 0 20px 60px rgba(0,0,0,0.65)`
-          : '0 8px 40px rgba(0,0,0,0.55)',
-        transform: hov ? 'translateY(-5px) scale(1.015)' : 'translateY(0) scale(1)',
-        transition:'all 0.2s ease',
-        outline:'none', fontFamily:"'DM Sans',system-ui,sans-serif",
-      }}
-    >
-      <div style={{
-        color:'#fff', fontSize:32, fontWeight:900, letterSpacing:'0.04em',
-        fontFamily:"'Big Shoulders Display',sans-serif", textTransform:'uppercase', lineHeight:1,
-      }}>{title}</div>
-      <div style={{color:'rgba(255,255,255,0.38)',fontSize:12,letterSpacing:'0.02em',flex:1,lineHeight:1.5}}>{desc}</div>
-      <div style={{paddingTop:12,borderTop:`1px solid rgba(255,255,255,0.07)`,display:'flex',alignItems:'center',gap:7}}>
-        <div style={{
-          width:7,height:7,borderRadius:'50%',flexShrink:0,
-          background: statusLit ? accent : 'rgba(255,255,255,0.18)',
-          boxShadow: statusLit ? `0 0 10px ${accent}` : 'none',
-          transition:'all 0.3s',
-        }}/>
-        <span style={{color:statusLit?accent:'rgba(255,255,255,0.28)',fontSize:10,fontWeight:600,letterSpacing:'0.07em'}}>{status}</span>
-      </div>
-    </button>
-  );
-}
-
 function HomeScreen({ serverState, onSelect }) {
-  const bracket  = serverState?.bracket;
-  const sw       = serverState?.sweepstake;
-  const stage    = bracket?.stage;
+  const bracket    = serverState?.bracket;
+  const sw         = serverState?.sweepstake;
+  const stage      = bracket?.stage;
   const stageLabel = {r32:'Round of 32',r16:'Round of 16',qf:'Quarter-Finals',sf:'Semi-Finals',final:'Final',champion:'Champion'}[stage];
-  const swParts  = sw?.participants?.length || 0;
-  const swLeader = swParts
+  const swParts    = sw?.participants?.length || 0;
+  const swLeader   = swParts
     ? [...sw.participants].sort((a,b) => swParticipantPts(b,sw.teamData||{}) - swParticipantPts(a,sw.teamData||{}))[0]
     : null;
 
   return (
-    <div style={{
-      height:'100%', overflowY:'auto',
-      background:'#030d1a url(/bg.png) center/cover no-repeat fixed',
-      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-      padding:'32px 20px', position:'relative', fontFamily:"'DM Sans',system-ui,sans-serif",
-    }}>
+    <div className="h-full overflow-y-auto flex flex-col items-center justify-center p-6 gap-6 relative">
       <StadiumBg/>
-      <div style={{position:'relative',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center',gap:40,width:'100%',maxWidth:580}}>
+      <div className="relative z-10 w-full max-w-lg flex flex-col gap-3">
+        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground text-center font-semibold mb-2">
+          DAF World Cup 2026
+        </p>
 
-        {/* Logo */}
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,animation:'scaleIn 0.5s ease'}}>
-          <img src="/daf-logo.png"
-            style={{height:80,objectFit:'contain',filter:'drop-shadow(0 0 28px rgba(0,200,83,0.45))',animation:'floatBob 3s ease-in-out infinite'}}
-            draggable={false} alt=""/>
-          <span style={{color:'rgba(255,255,255,0.38)',fontSize:9,letterSpacing:'0.45em',textTransform:'uppercase',fontWeight:700}}>
-            DAF World Cup 2026
-          </span>
-        </div>
+        {/* Penalties card */}
+        <Card
+          className="cursor-pointer border-border/40 bg-card/80 backdrop-blur hover:bg-card/95 hover:border-primary/40 transition-all duration-150 hover:-translate-y-0.5"
+          onClick={() => onSelect('bracket')}
+        >
+          <CardContent className="p-5 flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1 min-w-0">
+              <span className="text-lg font-bold uppercase tracking-wide leading-none">Penalties</span>
+              <span className="text-xs text-muted-foreground">Penalty shootout bracket tournament</span>
+            </div>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <Badge variant={!!bracket && stage !== 'champion' ? 'default' : 'outline'} className="text-[10px] whitespace-nowrap">
+                {stageLabel || (bracket ? 'Active' : 'No tournament')}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Panels */}
-        <div style={{display:'flex',gap:16,width:'100%',justifyContent:'center',flexWrap:'wrap'}}>
-          <HomePanel
-            title="Penalties"
-            desc="Penalty shootout bracket tournament"
-            accent="#00c853"
-            status={stageLabel || (bracket ? 'Tournament active' : 'No active tournament')}
-            statusLit={!!bracket && stage !== 'champion'}
-            onClick={() => onSelect('bracket')}
-          />
-          <HomePanel
-            title="Sweepstake"
-            desc="World Cup team draw & live leaderboard"
-            accent="#ffd700"
-            status={swLeader ? `Leader: ${swLeader.name}` : swParts ? `${swParts} players` : 'Not started'}
-            statusLit={swParts > 0}
-            onClick={() => onSelect('sweepstake')}
-          />
-        </div>
+        {/* Sweepstake card */}
+        <Card
+          className="cursor-pointer border-border/40 bg-card/80 backdrop-blur hover:bg-card/95 hover:border-yellow-500/40 transition-all duration-150 hover:-translate-y-0.5"
+          onClick={() => onSelect('sweepstake')}
+        >
+          <CardContent className="p-5 flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1 min-w-0">
+              <span className="text-lg font-bold uppercase tracking-wide leading-none">Sweepstake</span>
+              <span className="text-xs text-muted-foreground">World Cup team draw &amp; live leaderboard</span>
+            </div>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              {swLeader
+                ? <Badge variant="outline" className="text-[10px] text-yellow-400 border-yellow-500/40 whitespace-nowrap">Leader: {swLeader.name}</Badge>
+                : <Badge variant="outline" className="text-[10px] whitespace-nowrap">{swParts ? `${swParts} players` : 'Not started'}</Badge>
+              }
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
