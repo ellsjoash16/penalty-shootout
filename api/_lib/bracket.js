@@ -1,3 +1,13 @@
+// Top 32 FIFA-ranked nations that qualified for the 2026 World Cup (April 2026 rankings)
+const FIFA_TOP_32 = [
+  'France', 'Spain', 'Argentina', 'England', 'Portugal', 'Brazil',
+  'Netherlands', 'Morocco', 'Belgium', 'Germany', 'Croatia', 'Colombia',
+  'Senegal', 'Mexico', 'United States', 'Uruguay', 'Japan', 'Switzerland',
+  'Iran', 'Austria', 'Ecuador', 'South Korea', 'Australia', 'Egypt',
+  'Canada', 'Ivory Coast', 'Qatar', 'Algeria', 'Sweden', 'Tunisia',
+  'Czechia', 'Türkiye',
+];
+
 export const genCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -10,14 +20,12 @@ export const buildRound = (players, prefix) => {
   return next;
 };
 
-export const genBracket = (firstName) => {
-  // 32 players → straight R32 knockout
-  const players = Array.from({ length: 32 }, (_, i) => ({ code: genCode(), name: i === 0 ? firstName : null }));
-  for (let i = players.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [players[i], players[j]] = [players[j], players[i]];
-  }
-  const r32 = buildRound(players, 'r32_');
+export const genBracket = () => {
+  // Seed 32 FIFA nations: 1v32, 2v31, … 16v17
+  const slots = FIFA_TOP_32.map((name, i) => ({ code: genCode(), name, seed: i + 1 }));
+  const pairs = [];
+  for (let i = 0; i < 16; i++) pairs.push(slots[i], slots[31 - i]);
+  const r32 = buildRound(pairs, 'r32_');
   return { r32, r16: [], qf: [], sf: [], final: null, champion: null, stage: 'r32' };
 };
 
@@ -33,11 +41,14 @@ export const recordWin = (bracket, matchId, winner) => {
   const m = all.find(x => x.id === matchId);
   if (m) { m.winner = { ...winner }; m.played = true; }
 
+  // Strip player claims — carry only team identity (name + seed), fresh code each round
+  const freshSlots = winners => winners.map(w => ({ code: genCode(), name: w.name, seed: w.seed }));
+
   const done = arr => arr && arr.length > 0 && arr.every(x => x.played);
-  if      (b.stage === 'r32'   && done(b.r32))     { b.r16     = buildRound(b.r32.map(x => x.winner), 'r16_'); b.stage = 'r16'; }
-  else if (b.stage === 'r16'   && done(b.r16))     { b.qf      = buildRound(b.r16.map(x => x.winner), 'qf_');  b.stage = 'qf'; }
-  else if (b.stage === 'qf'    && done(b.qf))      { b.sf      = buildRound(b.qf.map(x => x.winner),  'sf_');  b.stage = 'sf'; }
-  else if (b.stage === 'sf'    && done(b.sf))      { const f   = buildRound(b.sf.map(x => x.winner), 'f'); b.final = { ...f[0], id: 'final' }; b.stage = 'final'; }
+  if      (b.stage === 'r32'   && done(b.r32))     { b.r16     = buildRound(freshSlots(b.r32.map(x => x.winner)), 'r16_'); b.stage = 'r16'; }
+  else if (b.stage === 'r16'   && done(b.r16))     { b.qf      = buildRound(freshSlots(b.r16.map(x => x.winner)), 'qf_');  b.stage = 'qf'; }
+  else if (b.stage === 'qf'    && done(b.qf))      { b.sf      = buildRound(freshSlots(b.qf.map(x => x.winner)),  'sf_');  b.stage = 'sf'; }
+  else if (b.stage === 'sf'    && done(b.sf))      { const f   = buildRound(freshSlots(b.sf.map(x => x.winner)), 'f'); b.final = { ...f[0], id: 'final' }; b.stage = 'final'; }
   else if (b.stage === 'final' && b.final?.played) { b.champion = b.final.winner; b.stage = 'champion'; }
 
   return b;

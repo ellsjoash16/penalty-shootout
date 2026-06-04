@@ -817,6 +817,20 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView, onAdminManage 
                 Manage Tournament
               </Button>
             )}
+
+            {serverState?.bracket && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300"
+                onClick={async () => {
+                  setMenuOpen(false);
+                  const res = await api('/api/tournament/seed-nations', {});
+                  if (res.error) alert(res.error);
+                }}
+              >
+                Seed FIFA Nations
+              </Button>
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -846,7 +860,7 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView, onAdminManage 
             {(() => {
               const allPlayers = (serverState.bracket.r32 || []).flatMap(m => [m.p1, m.p2]);
               const joined = allPlayers.filter(p => p.name).length;
-              const total = allPlayers.length;
+              const total = allPlayers.length || 32;
               return (
                 <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,overflow:'hidden'}}>
                   <div style={{background:'rgba(255,255,255,0.05)',padding:'6px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -856,9 +870,10 @@ function LoginScreen({ serverState, onJoined, onCPU, onAdminView, onAdminManage 
                   {allPlayers.map(p => (
                     <div key={p.code} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 12px',borderTop:'1px solid rgba(255,255,255,0.04)'}}>
                       <div style={{width:7,height:7,borderRadius:'50%',background:p.name?'#00c853':'rgba(255,255,255,0.15)',flexShrink:0}}/>
-                      <span style={{fontSize:12,color:p.name?'#fff':'rgba(255,255,255,0.25)',fontWeight:p.name?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                        {p.name || 'Empty slot'}
-                      </span>
+                      {p.name
+                        ? <span style={{fontSize:12,color:'#fff',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</span>
+                        : <AdminPlayerInput slotCode={p.code}/>
+                      }
                     </div>
                   ))}
                 </div>
@@ -1448,10 +1463,10 @@ function BracketTree({ bracket, myCode, onMatchClick }) {
   const [scale, setScale] = useState(1);
 
   // 9 columns: R32(0), R16(1), QF(2), SF(3), Final(4), SF(5), QF(6), R16(7), R32(8)
-  const MH   = 52;
-  const MW   = 118;
-  const GAP  = 14;
-  const STEP = 64;
+  const MH   = 72;
+  const MW   = 160;
+  const GAP  = 10;
+  const STEP = 96;
   const PX   = 14;
   const PY   = 28;
 
@@ -1533,65 +1548,86 @@ function BracketTree({ bracket, myCode, onMatchClick }) {
         {[0,1].map(i => (
           <div key={i} style={{flex:1,display:'flex',alignItems:'center',gap:7,padding:'0 8px',
             ...(i===1?{borderTop:'1px solid rgba(255,255,255,0.06)'}:{})}}>
-            <div style={{width:13,height:13,borderRadius:'50%',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',flexShrink:0}}/>
+            <div style={{width:14,height:14,borderRadius:'50%',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',flexShrink:0}}/>
             <span style={{color:'rgba(255,255,255,0.18)',fontSize:9,fontStyle:'italic'}}>TBD</span>
           </div>
         ))}
       </div>
     );
 
-    const myKey   = m.p1?.code === myCode ? 'p1' : m.p2?.code === myCode ? 'p2' : null;
-    const mySub   = m.submissions?.[myKey];
-    const canPlay = !m.played && m.p1?.name && m.p2?.name && myKey && !mySub;
-    const canView = m.played && (myKey || isAdmin);
+    const hasPlayers = m.p1?.name && m.p2?.name;
+    const showPlay = !!m.watchUrl;
 
-    const Slot = ({ p, won }) => (
-      <div style={{flex:1,display:'flex',alignItems:'center',gap:6,padding:'0 7px',
+    const Slot = ({ p, won, label }) => (
+      <div style={{flex:1,display:'flex',alignItems:'center',gap:6,padding:'0 8px',
         opacity: m.played && !won ? 0.35 : 1}}>
-        <div style={{width:13,height:13,borderRadius:'50%',flexShrink:0,
+        <div style={{width:14,height:14,borderRadius:'50%',flexShrink:0,
           background:won?'rgba(0,200,83,0.25)':'rgba(255,255,255,0.07)',
           border:`1.5px solid ${won?'#00c853':'rgba(255,255,255,0.12)'}`,
           display:'flex',alignItems:'center',justifyContent:'center',
           fontSize:7,fontWeight:900,color:won?'#00c853':'rgba(255,255,255,0.4)'}}>
-          {p?.name?.[0]?.toUpperCase()||'?'}
+          {label}
         </div>
-        <span style={{flex:1,fontSize:10,fontWeight:won?700:500,
-          color:p?.name?'#fff':'rgba(255,255,255,0.22)',
-          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-          {p?.name||'TBD'}
-        </span>
+        <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',justifyContent:'center'}}>
+          <span style={{fontSize:13,fontWeight:won?700:500,
+            color:p?.name?'#fff':'rgba(255,255,255,0.22)',
+            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block'}}>
+            {p?.name||'TBD'}
+          </span>
+          {p?.player && (
+            <span style={{fontSize:9,color:'rgba(255,255,255,0.4)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block',marginTop:2}}>
+              {p.player}
+            </span>
+          )}
+        </div>
         {won && <span style={{color:'#00c853',fontSize:9,flexShrink:0}}>✓</span>}
       </div>
     );
 
+    const matchNum = m.id === 'final' ? null : +m.id.split('_').pop() + 1;
+
     return (
-      <div onClick={() => (canPlay||canView) && onMatchClick(m)} style={{
-        position:'absolute',left:x+PX,top:top+PY,width:MW,height:MH,
-        border:`1px solid ${canPlay?'rgba(0,200,83,0.7)':m.played?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.1)'}`,
-        borderRadius:7,background:canPlay?'rgba(0,200,83,0.07)':'rgba(4,14,28,0.92)',
-        cursor:(canPlay||canView)?'pointer':'default',
-        display:'flex',flexDirection:'column',overflow:'hidden',boxSizing:'border-box',
-        backdropFilter:'blur(8px)',
-        boxShadow:canPlay?'0 0 14px rgba(0,200,83,0.22)':'0 2px 10px rgba(0,0,0,0.5)',
-      }}>
-        <Slot p={m.p1} won={m.winner?.code===m.p1?.code}/>
-        <div style={{height:1,background:'rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-          {m.played && (
-            <span style={{background:'rgba(4,14,28,0.95)',border:'1px solid rgba(255,255,255,0.12)',
-              borderRadius:4,padding:'1px 5px',fontSize:8,fontWeight:800,color:'#fff',
-              fontFamily:"'DM Sans',system-ui,sans-serif",letterSpacing:1}}>
-              {m.p1Score}-{m.p2Score}
-            </span>
-          )}
-        </div>
-        <Slot p={m.p2} won={m.winner?.code===m.p2?.code}/>
-        {canPlay && (
-          <div style={{position:'absolute',bottom:0,left:0,right:0,height:9,
-            background:'rgba(0,200,83,0.18)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <span style={{color:'#00c853',fontSize:7,fontWeight:800,letterSpacing:2}}>▶ PLAY</span>
+      <>
+        {matchNum !== null && (
+          <div style={{
+            position:'absolute',left:x+PX,top:top+PY-18,width:MW,
+            fontSize:9,fontWeight:700,letterSpacing:'0.12em',
+            color:'#ff1744',fontFamily:"'DM Sans',system-ui,sans-serif",
+            textTransform:'uppercase',
+          }}>
+            Match {matchNum}
           </div>
         )}
+      <div style={{
+        position:'absolute',left:x+PX,top:top+PY,width:MW,height:MH,
+        border:`1px solid ${m.played?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.1)'}`,
+        borderRadius:7,background:'rgba(4,14,28,0.92)',
+        display:'flex',flexDirection:'row',overflow:'hidden',boxSizing:'border-box',
+        backdropFilter:'blur(8px)',boxShadow:'0 2px 10px rgba(0,0,0,0.5)',
+      }}>
+        {/* Player rows */}
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
+          <Slot p={m.p1} won={m.winner?.code===m.p1?.code} label="A"/>
+          <div style={{height:1,background:'rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            {m.played && (
+              <span style={{background:'rgba(4,14,28,0.95)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:4,padding:'1px 5px',fontSize:8,fontWeight:800,color:'#fff',fontFamily:"'DM Sans',system-ui,sans-serif",letterSpacing:1}}>{m.p1Score}-{m.p2Score}</span>
+            )}
+          </div>
+          <Slot p={m.p2} won={m.winner?.code===m.p2?.code} label="B"/>
+        </div>
+        {/* Play button — opens Rise 360 URL */}
+        {showPlay && (
+          <a href={m.watchUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{
+            width:26,flexShrink:0,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            borderLeft:'1px solid rgba(0,200,83,0.3)',
+            background:'rgba(0,200,83,0.12)',
+            color:'#00c853',fontSize:11,
+            textDecoration:'none',cursor:'pointer',
+          }}>▶</a>
+        )}
       </div>
+      </>
     );
   };
 
@@ -1633,167 +1669,105 @@ function BracketTree({ bracket, myCode, onMatchClick }) {
 const CPU_ROUNDS = ['Round of 16', 'Quarter-Final', 'Semi-Final', 'Final'];
 
 function CPUMatchScreen({ playerName, roundLabel, onDone }) {
-  const [kicks, setKicks]   = useState([]);
-  const [phase, setPhase]   = useState('picking');
-  const [myZone, setMyZone] = useState(null);
-  const [kr, setKr]         = useState(null);
-  const [winner, setWinner] = useState(null);
-  const [sd, setSd]         = useState(false);
-  const busyRef             = useRef(false);
-  const kicksRef            = useRef([]);
-  const sdRef               = useRef(false);
+  const [shots, setShots] = useState(['','','','','']);
+  const [saves, setSaves] = useState(['','','','','']);
+  const [result, setResult] = useState(null);
 
-  const kickNum    = kicksRef.current.length + 1;
-  const iAmShooter = kickNum % 2 === 1;
+  const allFilled = shots.every(Boolean) && saves.every(Boolean);
 
-  const p1Score         = kicks.filter((k, i) => i % 2 === 0 && k.isGoal).length;
-  const p2Score         = kicks.filter((k, i) => i % 2 !== 0 && k.isGoal).length;
-  const playerShotKicks = kicks.filter((_, i) => i % 2 === 0);
-  const cpuShotKicks    = kicks.filter((_, i) => i % 2 !== 0);
-
-  const handlePick = async (zone) => {
-    if (busyRef.current || phase !== 'picking') return;
-    busyRef.current = true;
-    setMyZone(zone);
-    setKr(null);
-    setPhase('animating');
-
-    await new Promise(r => setTimeout(r, 600));
-    const cpuZone = rz();
-    const kn = kicksRef.current.length + 1;
-    const playerShootsNow = kn % 2 === 1;
-    const shotZone = playerShootsNow ? zone : cpuZone;
-    const saveZone = playerShootsNow ? cpuZone : zone;
-    const isGoal   = shotZone !== saveZone;
-    const scorer   = isGoal ? (playerShootsNow ? 'player' : 'cpu') : null;
-    const result   = { shotZone, saveZone, isGoal, scorer };
-
-    const newKicks = [...kicksRef.current, result];
-    kicksRef.current = newKicks;
-    setKicks(newKicks);
-    setKr(result);
-
-    await new Promise(r => setTimeout(r, 750));
-    setPhase('result');
-
-    const np1 = newKicks.filter((k, i) => i % 2 === 0 && k.isGoal).length;
-    const np2 = newKicks.filter((k, i) => i % 2 !== 0 && k.isGoal).length;
-
-    await new Promise(r => setTimeout(r, 1800));
-
-    const total = newKicks.length;
-    if (!sdRef.current) {
-      if (total >= TOTAL_KICKS) {
-        if (np1 !== np2) {
-          setWinner(np1 > np2 ? 'player' : 'cpu');
-          setPhase('done');
-          busyRef.current = false;
-          return;
-        }
-        sdRef.current = true;
-        setSd(true);
-      }
-    } else {
-      const sdCount = total - TOTAL_KICKS;
-      if (sdCount % 2 === 0 && np1 !== np2) {
-        setWinner(np1 > np2 ? 'player' : 'cpu');
-        setPhase('done');
-        busyRef.current = false;
-        return;
-      }
-    }
-
-    setMyZone(null);
-    setPhase('picking');
-    busyRef.current = false;
+  const handleSubmit = () => {
+    if (!allFilled) return;
+    const cpuShots = Array.from({length:5}, rz);
+    const cpuSaves = Array.from({length:5}, rz);
+    let p1Score = 0, p2Score = 0;
+    const kicks = shots.map((shot, i) => {
+      const p1Goal = shot !== cpuSaves[i];
+      const p2Goal = cpuShots[i] !== saves[i];
+      if (p1Goal) p1Score++;
+      if (p2Goal) p2Score++;
+      return { round: i+1, playerShot: shot, playerSave: saves[i], cpuShot: cpuShots[i], cpuSave: cpuSaves[i], p1Goal, p2Goal };
+    });
+    setResult({ kicks, p1Score, p2Score, won: p1Score > p2Score });
   };
 
-  const showReveal = phase === 'result';
-  const isGoalNow  = kr?.isGoal;
-
-  return (
-    <div style={{display:'flex',flexDirection:'column',height:'100%',background:'#030d1a url(/bg.png) center/cover no-repeat fixed',fontFamily:"'DM Sans',system-ui,sans-serif",position:'relative',overflow:'hidden'}}>
-      <PitchBg pulse={showReveal && isGoalNow}/>
-
-      <div style={{background:'rgba(0,0,0,0.65)',backdropFilter:'blur(12px)',borderBottom:'1px solid rgba(255,255,255,0.07)',padding:'10px 16px',position:'relative',zIndex:10}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div style={{flex:1}}>
-            <div style={{color:'rgba(255,255,255,0.4)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginBottom:2}}>{roundLabel}</div>
-            <div style={{color:'#fff',fontSize:12,fontWeight:700}}>{playerName}</div>
-          </div>
-          <div style={{textAlign:'center',padding:'0 12px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <div key={p1Score} style={{fontSize:44,color:'#fff',minWidth:52,textAlign:'center',lineHeight:1,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.06em',padding:'3px 10px',background:'rgba(0,0,0,0.5)',borderRadius:3,border:'1px solid rgba(0,200,83,0.12)',animation:'scorePopIn 0.35s ease'}}>{p1Score}</div>
-              <div style={{color:'rgba(255,255,255,0.2)',fontSize:18,fontWeight:100,padding:'0 2px'}}>—</div>
-              <div key={p2Score+100} style={{fontSize:44,color:'#fff',minWidth:52,textAlign:'center',lineHeight:1,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.06em',padding:'3px 10px',background:'rgba(0,0,0,0.5)',borderRadius:3,border:'1px solid rgba(0,200,83,0.12)',animation:'scorePopIn 0.35s ease'}}>{p2Score}</div>
+  if (result) {
+    return (
+      <div style={{display:'flex',flexDirection:'column',height:'100%',background:'#030d1a url(/bg.png) center/cover no-repeat fixed',fontFamily:"'DM Sans',system-ui,sans-serif",overflowY:'auto'}}>
+        <StadiumBg/>
+        <div style={{maxWidth:420,width:'100%',margin:'0 auto',padding:'24px 16px 40px',display:'flex',flexDirection:'column',gap:14,position:'relative',zIndex:1}}>
+          <div style={{textAlign:'center',padding:'12px 0 4px'}}>
+            <div style={{fontSize:52,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",textTransform:'uppercase',letterSpacing:2,color:result.won?'#00c853':'#ff6b35',textShadow:result.won?'0 0 40px rgba(0,200,83,0.5)':'none'}}>
+              {result.won ? 'You Win' : 'You Lose'}
             </div>
-            <div style={{color:'rgba(255,255,255,0.28)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginTop:1}}>
-              {sd ? 'SUDDEN DEATH' : `Kick ${Math.min(kickNum, TOTAL_KICKS)}/${TOTAL_KICKS}`}
+            <div style={{color:'rgba(255,255,255,0.5)',fontSize:22,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",marginTop:4,letterSpacing:4}}>
+              {result.p1Score} – {result.p2Score}
             </div>
+            <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',marginTop:4}}>{roundLabel}</div>
           </div>
-          <div style={{flex:1,textAlign:'right'}}>
-            <div style={{color:'rgba(255,255,255,0.4)',fontSize:9,letterSpacing:2,textTransform:'uppercase',marginBottom:2}}>vs</div>
-            <div style={{color:'#ff6b35',fontSize:12,fontWeight:700}}>CPU</div>
-          </div>
-        </div>
-        <div style={{display:'flex',justifyContent:'center',gap:3,marginTop:8}}>
-          {Array.from({length:Math.ceil(TOTAL_KICKS/2)},(_,i)=>{
-            const pk=playerShotKicks[i]; const ck=cpuShotKicks[i];
-            return (
-              <div key={i} style={{display:'flex',flexDirection:'column',gap:2,alignItems:'center'}}>
-                <div style={{width:10,height:10,borderRadius:'50%',background:!pk?'rgba(255,255,255,0.08)':pk.isGoal?'#00c853':'rgba(255,255,255,0.25)',border:`1px solid ${!pk?'rgba(255,255,255,0.15)':pk.isGoal?'#00c853':'rgba(255,255,255,0.4)'}`,transition:'all 0.3s'}}/>
-                <div style={{width:10,height:10,borderRadius:'50%',background:!ck?'rgba(255,255,255,0.08)':ck.isGoal?'#ff1744':'rgba(255,255,255,0.25)',border:`1px solid ${!ck?'rgba(255,255,255,0.15)':ck.isGoal?'#ff1744':'rgba(255,255,255,0.4)'}`,transition:'all 0.3s'}}/>
+
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {result.kicks.map(k => (
+              <div key={k.round} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,padding:'10px 12px',display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:8,alignItems:'center'}}>
+                <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                  <div style={{display:'flex',alignItems:'center',gap:5}}>
+                    <span style={{color:k.p1Goal?'#00c853':'rgba(255,255,255,0.3)',fontSize:11,fontWeight:700}}>{k.p1Goal ? 'GOAL' : 'SAVED'}</span>
+                    <span style={{color:'rgba(255,255,255,0.25)',fontSize:9}}>{ZONE_ICONS[k.playerShot]}→{ZONE_ICONS[k.cpuSave]}</span>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:5}}>
+                    <span style={{color:k.p2Goal?'#ff1744':'rgba(255,255,255,0.3)',fontSize:11,fontWeight:700}}>{k.p2Goal ? 'CPU GOAL' : 'YOU SAVED'}</span>
+                    <span style={{color:'rgba(255,255,255,0.25)',fontSize:9}}>{ZONE_ICONS[k.cpuShot]}→{ZONE_ICONS[k.playerSave]}</span>
+                  </div>
+                </div>
+                <div style={{color:'rgba(255,255,255,0.2)',fontSize:9,letterSpacing:'0.1em',textAlign:'center'}}>R{k.round}</div>
+                <div/>
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          <button onClick={() => onDone(result.won)} style={{
+            marginTop:8,padding:'14px',borderRadius:8,fontSize:14,fontWeight:800,letterSpacing:'0.05em',
+            background:result.won?'linear-gradient(135deg,#00c853,#00a651)':'rgba(255,255,255,0.08)',
+            border:'none',color:result.won?'#000':'rgba(255,255,255,0.7)',cursor:'pointer',
+          }}>
+            Continue →
+          </button>
         </div>
       </div>
+    );
+  }
 
-      <div style={{flex:1,display:'flex',flexDirection:'column',position:'relative',zIndex:1,overflow:'hidden'}}>
-        <PenaltyOverlay
-          phase={phase}
-          shotZone={kr?.shotZone}
-          saveZone={kr?.saveZone}
-          isGoal={kr?.isGoal}
-          picking={phase === 'picking'}
-          myZone={myZone}
-          onPick={handlePick}
-        />
-
-        {showReveal && (
-          <div style={{position:'absolute',inset:0,zIndex:20,pointerEvents:'none'}}>
-            <div style={{position:'absolute',left:'50%',top:'42%',fontSize:58,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:1,textTransform:'uppercase',color:isGoalNow?'#00c853':'#ff1744',textShadow:isGoalNow?'0 0 60px rgba(0,200,83,0.95),0 0 120px rgba(0,200,83,0.5)':'0 0 60px rgba(255,23,68,0.9)',animation:'stampIn 0.42s cubic-bezier(0.2,0,0.2,1) forwards'}}>
-              {isGoalNow ? 'GOAL!' : 'SAVED!'}
-            </div>
-            <div style={{position:'absolute',left:'50%',top:'62%',transform:'translateX(-50%)',color:'rgba(255,255,255,0.65)',fontSize:12,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center',animation:'fadeSlideUp 0.5s 0.25s ease both'}}>
-              {isGoalNow ? `${kr.scorer==='player' ? playerName.split(' ')[0] : 'CPU'} scored` : 'Saved'}
-            </div>
-          </div>
-        )}
-
-        {phase === 'done' && (
-          <div style={{position:'absolute',inset:0,zIndex:25,background:'rgba(0,0,0,0.78)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',animation:'scaleIn 0.5s ease'}}>
-            <div style={{fontSize:52,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",textTransform:'uppercase',letterSpacing:1,color:winner==='player'?'#00c853':'#ff6b35',textShadow:winner==='player'?'0 0 50px rgba(0,200,83,0.6)':'none'}}>
-              {winner === 'player' ? 'You Win' : 'You Lose'}
-            </div>
-            <div style={{color:'rgba(255,255,255,0.5)',fontSize:18,marginTop:8}}>{p1Score} – {p2Score}</div>
-            <Button onClick={() => onDone(winner === 'player')} size="lg" style={{marginTop:24}}>Continue →</Button>
-          </div>
-        )}
-
-        {/* Role pill + hint pinned to bottom */}
-        <div style={{position:'absolute',bottom:16,left:0,right:0,zIndex:15,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.55)',border:`1px solid ${iAmShooter?'rgba(0,166,81,0.6)':'rgba(64,196,255,0.5)'}`,borderRadius:20,padding:'6px 16px',backdropFilter:'blur(8px)'}}>
-            <span style={{fontSize:9,fontWeight:900,letterSpacing:1,opacity:0.7}}>{iAmShooter ? 'ATK' : 'DEF'}</span>
-            <span style={{color:iAmShooter?'#00a651':'#40c4ff',fontSize:10,fontWeight:800,letterSpacing:2.5,textTransform:'uppercase'}}>
-              {playerName.split(' ')[0]} — {iAmShooter ? 'SHOOT' : 'SAVE'}
-            </span>
-            {sd && <span style={{color:'#00c853',fontSize:9,fontWeight:800,letterSpacing:2,marginLeft:4}}>SD</span>}
-          </div>
-          <div style={{color:'rgba(255,255,255,0.5)',fontSize:9,letterSpacing:2.5,textTransform:'uppercase',textAlign:'center',minHeight:14,textShadow:'0 1px 4px rgba(0,0,0,0.9)'}}>
-            {phase === 'picking' ? (iAmShooter ? 'Tap to aim your shot' : 'Tap to choose dive direction') : phase === 'animating' ? 'Resolving...' : ''}
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%',background:'#030d1a url(/bg.png) center/cover no-repeat fixed',fontFamily:"'DM Sans',system-ui,sans-serif",overflowY:'auto'}}>
+      <StadiumBg/>
+      <div style={{maxWidth:420,width:'100%',margin:'0 auto',padding:'20px 16px 40px',display:'flex',flexDirection:'column',gap:14,position:'relative',zIndex:1}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <div style={{color:'rgba(255,255,255,0.4)',fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase'}}>{roundLabel} · vs CPU</div>
+            <div style={{color:'#fff',fontSize:15,fontWeight:800,marginTop:2}}>{playerName}</div>
           </div>
         </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:4}}>
+          <div style={{color:'#00c853',fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',textAlign:'center'}}>Shot</div>
+          <div style={{color:'#ff6b35',fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',textAlign:'center'}}>Save</div>
+        </div>
+        {[0,1,2,3,4].map(i => (
+          <div key={i} style={{display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{color:'rgba(255,255,255,0.25)',fontSize:9,letterSpacing:'0.1em'}}>ROUND {i+1}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              <ZoneGrid selected={shots[i]} onSelect={z => setShots(s => { const n=[...s]; n[i]=z; return n; })} color='#00c853'/>
+              <ZoneGrid selected={saves[i]} onSelect={z => setSaves(s => { const n=[...s]; n[i]=z; return n; })} color='#ff6b35'/>
+            </div>
+          </div>
+        ))}
+        <button onClick={handleSubmit} disabled={!allFilled} style={{
+          marginTop:8,padding:'14px',borderRadius:8,fontSize:14,fontWeight:800,letterSpacing:'0.05em',
+          background: allFilled ? 'linear-gradient(135deg,#00c853,#00a651)' : 'rgba(255,255,255,0.06)',
+          border: allFilled ? 'none' : '1px solid rgba(255,255,255,0.1)',
+          color: allFilled ? '#000' : 'rgba(255,255,255,0.3)',
+          cursor: allFilled ? 'pointer' : 'default',
+        }}>
+          {allFilled ? 'Submit Shots & Saves' : `${shots.filter(Boolean).length}/5 shots · ${saves.filter(Boolean).length}/5 saves`}
+        </button>
       </div>
     </div>
   );
@@ -2016,210 +1990,600 @@ function GroupStageView_UNUSED({ bracket, myCode, onMatchClick }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ADMIN PLAYER INPUT — lets admin name an empty slot directly
+// ═══════════════════════════════════════════════════════════════
+
+function AdminPlayerInput({ slotCode }) {
+  const [val, setVal] = useState('');
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+
+  const save = async () => {
+    const n = val.trim();
+    if (!n) return;
+    const res = await api('/api/register', { code: slotCode, name: n });
+    if (res.error) { setErr(res.error); return; }
+    setDone(true);
+  };
+
+  if (done) return <span style={{ color: '#00c853', fontSize: 11 }}>✓ Added</span>;
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <input
+        type="text"
+        placeholder="Add player name…"
+        value={val}
+        onChange={e => { setVal(e.target.value); setErr(''); }}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); save(); } }}
+        style={{
+          width: '100%', padding: '3px 7px', borderRadius: 4,
+          background: '#0a1628', border: '1px solid rgba(255,255,255,0.12)',
+          color: 'rgba(255,255,255,0.8)', fontSize: 11,
+          fontFamily: "'DM Sans',system-ui,sans-serif", outline: 'none',
+        }}
+      />
+      {err && <span style={{ color: '#ff4444', fontSize: 10 }}>{err}</span>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WATCH URL INPUT — controlled local state, doesn't fight polling
+// ═══════════════════════════════════════════════════════════════
+
+function WatchUrlInput({ matchId, initialUrl, placeholder = 'Watch URL…' }) {
+  const [val, setVal] = useState(initialUrl || '');
+  const [saved, setSaved] = useState(false);
+
+  const save = async () => {
+    await api('/api/match/watchurl', { matchId, url: val });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <input
+        type="url"
+        placeholder={placeholder}
+        value={val}
+        onChange={e => { setVal(e.target.value); setSaved(false); }}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); save(); e.target.blur(); } }}
+        style={{
+          flex: 1, padding: '6px 8px', borderRadius: 5,
+          background: '#0a1628', border: '1px solid rgba(255,255,255,0.1)',
+          color: 'rgba(255,255,255,0.75)', fontSize: 11,
+          fontFamily: "'DM Sans',system-ui,sans-serif", outline: 'none',
+        }}
+      />
+      {saved && <span style={{ color: '#00c853', fontSize: 11, flexShrink: 0 }}>✓</span>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TEAM PICKER — shown each round so players pick a fresh team
+// ═══════════════════════════════════════════════════════════════
+
+function TeamPicker({ bracket, playerName: initialPlayerName, onPicked }) {
+  const [playerName, setPlayerNameState] = useState(initialPlayerName || '');
+  const [nameConfirmed, setNameConfirmed] = useState(!!initialPlayerName);
+  const [nameInput, setNameInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const confirmName = () => {
+    const n = nameInput.trim();
+    if (!n) { setErr('Enter your name or email'); return; }
+    localStorage.setItem('psc_name', n);
+    setPlayerNameState(n);
+    setNameConfirmed(true);
+    setErr('');
+  };
+
+  if (!nameConfirmed) return (
+    <div style={{position:'fixed',inset:0,zIndex:10003,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+      <div style={{width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:14}}>
+        <div style={{textAlign:'center'}}>
+          <p style={{color:'#ff1744',fontSize:9,letterSpacing:'0.25em',textTransform:'uppercase',fontWeight:700,margin:0}}>Welcome</p>
+          <p style={{color:'#fff',fontSize:22,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.05em',textTransform:'uppercase',margin:'4px 0 0'}}>Who Are You?</p>
+        </div>
+        <Input
+          autoFocus
+          placeholder="Your name or email"
+          value={nameInput}
+          onChange={e => { setNameInput(e.target.value); setErr(''); }}
+          onKeyDown={e => e.key === 'Enter' && confirmName()}
+        />
+        {err && <p style={{color:'#ff4444',fontSize:11,margin:0,textAlign:'center'}}>{err}</p>}
+        <Button onClick={confirmName}>Continue →</Button>
+      </div>
+    </div>
+  );
+
+  const stage = bracket.stage;
+  const stageLabel = { r32:'Round of 32', r16:'Round of 16', qf:'Quarter-Finals', sf:'Semi-Finals', final:'Final' }[stage] || stage;
+
+  const matches = stage === 'final' ? (bracket.final ? [bracket.final] : []) : (bracket[stage] || []);
+  const slots = matches.flatMap(m => [
+    { ...m.p1, matchId: m.id, side: 'p1' },
+    { ...m.p2, matchId: m.id, side: 'p2' },
+  ]).filter(s => s?.name);
+
+  const pick = async (slot) => {
+    if (busy) return;
+    setBusy(true); setErr('');
+    const res = await api('/api/tournament/claim-team', { playerName, slotCode: slot.code });
+    setBusy(false);
+    if (res.error) { setErr(res.error); return; }
+    localStorage.setItem('psc_code', res.code);
+    onPicked(res.code);
+  };
+
+  return (
+    <div style={{
+      position:'fixed',inset:0,zIndex:10003,
+      background:'rgba(0,0,0,0.85)',backdropFilter:'blur(6px)',
+      display:'flex',alignItems:'center',justifyContent:'center',
+      padding:'20px 16px',overflowY:'auto',
+    }}>
+      <div style={{width:'100%',maxWidth:360,display:'flex',flexDirection:'column',gap:12}}>
+        <div style={{textAlign:'center'}}>
+          <p style={{color:'#ff1744',fontSize:9,letterSpacing:'0.25em',textTransform:'uppercase',fontWeight:700,margin:0}}>{stageLabel}</p>
+          <p style={{color:'#fff',fontSize:20,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.05em',textTransform:'uppercase',margin:'4px 0 0'}}>Pick Your Team</p>
+          <p style={{color:'rgba(255,255,255,0.35)',fontSize:11,margin:'4px 0 0'}}>{playerName}</p>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:'60vh',overflowY:'auto'}}>
+          {slots.map(slot => (
+            <button key={slot.code} disabled={!!slot.player || busy} onClick={() => pick(slot)} style={{
+              display:'flex',alignItems:'center',gap:10,padding:'10px 14px',
+              background: slot.player ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${slot.player ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.14)'}`,
+              borderRadius:8,cursor:slot.player?'default':'pointer',
+              transition:'all 0.12s',opacity:slot.player?0.4:1,
+              fontFamily:"'DM Sans',system-ui,sans-serif",
+            }}
+            onMouseEnter={e => { if (!slot.player) e.currentTarget.style.background='rgba(0,200,83,0.12)'; }}
+            onMouseLeave={e => { if (!slot.player) e.currentTarget.style.background='rgba(255,255,255,0.06)'; }}
+            >
+              <div style={{width:28,height:28,borderRadius:'50%',flexShrink:0,
+                background: slot.player ? 'rgba(255,255,255,0.05)' : 'rgba(0,200,83,0.15)',
+                border:`1.5px solid ${slot.player?'rgba(255,255,255,0.1)':'rgba(0,200,83,0.4)'}`,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:10,fontWeight:900,color:slot.player?'rgba(255,255,255,0.3)':'#00c853',
+              }}>
+                {slot.seed}
+              </div>
+              <div style={{flex:1,textAlign:'left'}}>
+                <div style={{color:'#fff',fontSize:13,fontWeight:700}}>{slot.name}</div>
+                {slot.player && <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,marginTop:1}}>Taken</div>}
+              </div>
+              {!slot.player && <span style={{color:'rgba(255,255,255,0.3)',fontSize:11}}>→</span>}
+            </button>
+          ))}
+        </div>
+        {err && <p style={{color:'#ff4444',fontSize:11,textAlign:'center',margin:0}}>{err}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TOURNAMENT SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, startManaging, onBack, onLogout, onDeleteTournament }) {
-  const [submitMatch, setSubmitMatch] = useState(null);
+function TournamentScreen({ bracket, myCode, setMyCode, isAdmin, tournamentCode, tournamentName, startManaging, onLeave, onLogout, onDeleteTournament, onCPU, onJoined, onAdminLogin, onTournamentCreated, onCodeEntered }) {
+  const [submitMatch] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Code entry — shown when no local tournament code saved and user isn't admin
+  const [codeInput, setCodeInput] = useState('');
+  const [codeErr, setCodeErr] = useState('');
+  const needsCode = !isAdmin && !localStorage.getItem('psc_tcode');
+
+  const submitCode = () => {
+    const c = codeInput.trim().toUpperCase();
+    if (!c) { setCodeErr('Enter the tournament code'); return; }
+    if (!tournamentCode) { setCodeErr('No active tournament found'); return; }
+    if (c !== tournamentCode.toUpperCase()) { setCodeErr('Wrong code — check with your admin'); return; }
+    localStorage.setItem('psc_tcode', c);
+    if (tournamentName) localStorage.setItem('psc_tname', tournamentName);
+    onCodeEntered();
+  };
+
+  const playerName = localStorage.getItem('psc_name');
+  // Show team picker when: not admin, bracket exists, not finished, and player hasn't claimed a team this round (or hasn't identified yet)
+  const needsPick = !isAdmin && !!bracket && bracket.stage !== 'champion' && (() => {
+    if (!playerName) return true;
+    const stage = bracket.stage;
+    const matches = stage === 'final' ? (bracket.final ? [bracket.final] : []) : (bracket[stage] || []);
+    return !matches.some(m => m.p1?.player === playerName || m.p2?.player === playerName);
+  })();
   const [menuOpen, setMenuOpen] = useState(false);
   const [managing, setManaging] = useState(!!startManaging);
   const [resolvingId, setResolvingId] = useState(null);
-  const isAdmin = !myCode;
+  const [winnerSelections, setWinnerSelections] = useState({});
 
-  const pendingMatches = (() => {
-    const result = [];
-    for (const [key, label] of [['r32','Round of 32'],['r16','Round of 16'],['qf','Quarter-Finals'],['sf','Semi-Finals']])
-      for (const m of (bracket[key] || []))
-        if (m.submissions?.p1 && m.submissions?.p2 && !m.played && m.p1?.name && m.p2?.name)
-          result.push({ match: m, stage: label });
-    if (bracket.final?.submissions?.p1 && bracket.final?.submissions?.p2 && !bracket.final?.played && bracket.final?.p1?.name && bracket.final?.p2?.name)
-      result.push({ match: bracket.final, stage: 'Final' });
-    return result;
-  })();
+  // Join modal
+  const [joinModal, setJoinModal] = useState(false);
+  const [joinName, setJoinName] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinErr, setJoinErr] = useState('');
 
-  const stageLabel = {groups:'GROUP STAGE',r32:'ROUND OF 32',r16:'ROUND OF 16',qf:'QUARTER-FINALS',sf:'SEMI-FINALS',final:'FINAL',champion:'CHAMPION'}[bracket.stage] || '';
+  // Admin login modal
+  const [adminPrompt, setAdminPrompt] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPass, setAdminPass] = useState('');
+  const [adminErr, setAdminErr] = useState('');
+
+  // New tournament modal
+  const [newTourneyModal, setNewTourneyModal] = useState(false);
+  const [newTourneyName, setNewTourneyName] = useState('');
+  const [newTourneyBusy, setNewTourneyBusy] = useState(false);
+  const [newTourneyErr, setNewTourneyErr] = useState('');
+
+  const stageLabel = {r32:'ROUND OF 32',r16:'ROUND OF 16',qf:'QUARTER-FINALS',sf:'SEMI-FINALS',final:'FINAL',champion:'CHAMPION'}[bracket?.stage] || '';
 
   const openMatch = (match) => setSubmitMatch(match);
 
   const resolveMatch = async (matchId, winnerCode) => {
-    if (resolvingId) return;
+    if (!winnerCode || resolvingId) return;
     setResolvingId(matchId);
     try { await api('/api/match/resolve', { matchId, winnerCode }); } catch(e) {}
     setResolvingId(null);
+  };
+
+
+  const handleJoin = async () => {
+    if (!joinName.trim()) { setJoinErr('Enter your name'); return; }
+    if (!joinCode.trim()) { setJoinErr('Enter the tournament code'); return; }
+    setJoinBusy(true); setJoinErr('');
+    const res = await api('/api/join', { name: joinName.trim(), tournamentCode: joinCode.trim().toUpperCase() });
+    setJoinBusy(false);
+    if (res.error) { setJoinErr(res.error); return; }
+    localStorage.setItem('psc_code', res.code);
+    localStorage.setItem('psc_name', joinName.trim());
+    setJoinModal(false);
+    onJoined(res.code);
+  };
+
+  const doAdminLogin = () => {
+    if (adminEmail.trim().toLowerCase() === 'thehub@dialaflight.co.uk' && adminPass === 'Mexico@#1000') {
+      sessionStorage.setItem('psc_admin', '1');
+      setAdminPrompt(false); setAdminErr('');
+      onAdminLogin();
+    } else { setAdminErr('Invalid credentials'); }
+  };
+
+  const createNewTourney = async () => {
+    const tname = newTourneyName.trim();
+    if (!tname) { setNewTourneyErr('Enter a tournament name'); return; }
+    setNewTourneyBusy(true);
+    await api('/api/tournament/reset', {});
+    const res = await api('/api/tournament/create', { name: 'TheHub@dialaflight.co.uk', tournamentName: tname });
+    setNewTourneyBusy(false);
+    if (res.error) { setNewTourneyErr(res.error); return; }
+    if (res.tournamentCode) localStorage.setItem('psc_tcode', res.tournamentCode);
+    localStorage.setItem('psc_tname', tname);
+    localStorage.removeItem('psc_code');
+    setNewTourneyModal(false);
+    onTournamentCreated(res.tournamentCode, tname);
   };
 
   return (
     <div style={{height:'100%',overflowY:'auto',WebkitOverflowScrolling:'touch',position:'relative',background:'#030d1a url(/bg.png) center/cover no-repeat fixed'}}>
       <StadiumBg/>
 
-      {/* Drawer backdrop */}
-      {menuOpen && (
-        <div style={{position:'fixed',inset:0,zIndex:9998,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(2px)'}} onClick={() => setMenuOpen(false)}/>
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetContent side="left" className="w-64 flex flex-col p-0 gap-0">
+          <SheetHeader className="px-5 pt-6 pb-4 border-b border-white/[0.07]">
+            <SheetTitle className="text-xl uppercase tracking-wide leading-none" style={{fontFamily:"'Big Shoulders Display',sans-serif"}}>
+              {tournamentName || 'DAF World Cup 2026'}
+            </SheetTitle>
+            <SheetDescription className="flex items-center gap-2 mt-1">
+              {stageLabel && <span className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground">{stageLabel}</span>}
+              {tournamentCode && <Badge variant="outline" className="text-[11px] tracking-widest text-primary border-primary/30 font-bold">{tournamentCode}</Badge>}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="flex flex-col flex-1 overflow-y-auto py-2">
+            {isAdmin && bracket && (
+              <SheetClose asChild>
+                <Button variant="ghost" className="justify-start rounded-none h-12 px-5 text-sm font-medium" onClick={() => setManaging(true)}>
+                  Manage Tournament
+                </Button>
+              </SheetClose>
+            )}
+
+            {!isAdmin && !myCode && bracket && (
+              <SheetClose asChild>
+                <Button variant="ghost" className="justify-start rounded-none h-12 px-5 text-sm font-medium" onClick={() => { setJoinName(''); setJoinCode(tournamentCode||''); setJoinErr(''); setJoinModal(true); }}>
+                  Join Tournament
+                </Button>
+              </SheetClose>
+            )}
+
+            {myCode && (
+              <SheetClose asChild>
+                <Button variant="ghost" className="justify-start rounded-none h-12 px-5 text-sm font-medium" onClick={onLeave}>
+                  Leave Tournament
+                </Button>
+              </SheetClose>
+            )}
+
+            <Separator className="my-1 bg-white/[0.06]" />
+
+            <SheetClose asChild>
+              <Button variant="ghost" className="justify-start rounded-none h-12 px-5 text-sm font-medium" onClick={() => onCPU(myCode ? localStorage.getItem('psc_name') : 'Player')}>
+                Solo vs CPU
+              </Button>
+            </SheetClose>
+
+            {isAdmin && (
+              <SheetClose asChild>
+                <Button variant="ghost" className="justify-start rounded-none h-12 px-5 text-sm font-medium" onClick={() => { setNewTourneyName(''); setNewTourneyErr(''); setNewTourneyModal(true); }}>
+                  New Tournament
+                </Button>
+              </SheetClose>
+            )}
+
+            {isAdmin && bracket && (
+              <SheetClose asChild>
+                <Button variant="ghost" className="justify-start rounded-none h-12 px-5 text-sm font-medium text-yellow-400 hover:text-yellow-300" onClick={async () => {
+                  const res = await api('/api/tournament/seed-nations', {});
+                  if (res.error) alert(res.error);
+                }}>
+                  Seed FIFA Nations
+                </Button>
+              </SheetClose>
+            )}
+          </div>
+
+          <div className="px-4 pb-6 pt-3 flex flex-col gap-2 border-t border-white/[0.07]">
+            {isAdmin ? (
+              <>
+                <SheetClose asChild>
+                  <Button variant="destructive" className="w-full" onClick={() => setConfirmDelete(true)}>
+                    Delete Tournament
+                  </Button>
+                </SheetClose>
+                <SheetClose asChild>
+                  <Button variant="outline" className="w-full" onClick={onLogout}>
+                    Logout
+                  </Button>
+                </SheetClose>
+              </>
+            ) : (
+              <SheetClose asChild>
+                <Button variant="outline" className="w-full" onClick={() => { setAdminEmail(''); setAdminPass(''); setAdminErr(''); setAdminPrompt(true); }}>
+                  Admin Login
+                </Button>
+              </SheetClose>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Admin login modal */}
+      {adminPrompt && (
+        <div style={{position:'fixed',inset:0,zIndex:10002,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center'}}
+          onMouseDown={e => { if (e.target === e.currentTarget) { setAdminPrompt(false); setAdminErr(''); } }}>
+          <div style={{background:'#060f1e',border:'1px solid rgba(0,200,83,0.2)',borderRadius:10,padding:'24px 20px',width:280,display:'flex',flexDirection:'column',gap:10}}
+            onMouseDown={e => e.stopPropagation()}>
+            <p style={{color:'rgba(255,255,255,0.4)',fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',margin:0}}>Admin Access</p>
+            <Input type="email" placeholder="Email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} autoFocus/>
+            <Input type="password" placeholder="Password" value={adminPass} onChange={e => setAdminPass(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && doAdminLogin()}/>
+            {adminErr && <p style={{color:'#ff4444',fontSize:11,margin:0}}>{adminErr}</p>}
+            <Button size="sm" onClick={doAdminLogin}>Unlock</Button>
+          </div>
+        </div>
       )}
 
-      {/* Slide-out drawer */}
-      <div style={{
-        position:'fixed',top:0,left:0,bottom:0,zIndex:9999,
-        width:240,
-        background:'#060f1e',
-        borderRight:'1px solid rgba(255,255,255,0.1)',
-        display:'flex',flexDirection:'column',
-        transform:menuOpen?'translateX(0)':'translateX(-100%)',
-        transition:'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
-        boxShadow:menuOpen?'4px 0 32px rgba(0,0,0,0.7)':'none',
-      }}>
-        {/* Drawer header */}
-        <div style={{padding:'20px 20px 16px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
-          <div style={{color:'#fff',fontSize:28,letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:"'Big Shoulders Display',sans-serif",fontWeight:800,lineHeight:1}}>
-            {tournamentName || 'DAF World Cup 2026'}
-          </div>
-          <div style={{marginTop:7,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-            {stageLabel && <span style={{color:'rgba(255,255,255,0.4)',fontSize:10,letterSpacing:'0.14em',textTransform:'uppercase',fontFamily:"'DM Sans',system-ui,sans-serif",fontWeight:600}}>{stageLabel}</span>}
-            {tournamentCode && (
-              <span style={{color:'#00c853',fontFamily:"'DM Sans',system-ui,sans-serif",fontSize:11,letterSpacing:'0.22em',fontWeight:800,background:'rgba(0,200,83,0.1)',border:'1px solid rgba(0,200,83,0.25)',borderRadius:4,padding:'2px 8px',textTransform:'uppercase'}}>{tournamentCode}</span>
-            )}
+      {/* Join tournament modal */}
+      {joinModal && (
+        <div style={{position:'fixed',inset:0,zIndex:10002,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center'}}
+          onMouseDown={e => { if (e.target === e.currentTarget) setJoinModal(false); }}>
+          <div style={{background:'#060f1e',border:'1px solid rgba(0,200,83,0.25)',borderRadius:12,padding:'24px 20px',width:290,display:'flex',flexDirection:'column',gap:10}}
+            onMouseDown={e => e.stopPropagation()}>
+            <p style={{color:'#fff',fontSize:15,fontWeight:900,margin:0}}>Join Tournament</p>
+            <Input placeholder="Your name" value={joinName} onChange={e => setJoinName(e.target.value)} autoFocus/>
+            <Input placeholder="Tournament code" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} maxLength={4}
+              style={{letterSpacing:'0.25em',fontWeight:700,textTransform:'uppercase'}}
+              onKeyDown={e => e.key === 'Enter' && handleJoin()}/>
+            {joinErr && <p style={{color:'#ff4444',fontSize:11,margin:0}}>{joinErr}</p>}
+            <Button disabled={joinBusy} onClick={handleJoin}>{joinBusy ? '…' : 'Join'}</Button>
           </div>
         </div>
+      )}
 
-        {/* Drawer items */}
-        <div style={{flex:1,padding:'10px 0'}}>
-          {isAdmin && (
-            <button onClick={() => { setMenuOpen(false); setManaging(true); }} style={{
-              width:'100%',display:'flex',alignItems:'center',gap:12,
-              padding:'14px 20px',background:'none',border:'none',
-              color:'rgba(255,255,255,0.65)',
-              fontSize:13,letterSpacing:'0.02em',
-              fontFamily:"'DM Sans',system-ui,sans-serif",fontWeight:500,
-              cursor:'pointer',textAlign:'left',
-            }}
-              onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.05)'}
-              onMouseLeave={e=>e.currentTarget.style.background='none'}
-            >
-              Manage Tournament
-            </button>
-          )}
-          <button onClick={() => { setMenuOpen(false); onBack(); }} style={{
-            width:'100%',display:'flex',alignItems:'center',gap:12,
-            padding:'14px 20px',background:'none',border:'none',
-            color:'rgba(255,255,255,0.65)',
-            fontSize:13,letterSpacing:'0.02em',
-            fontFamily:"'DM Sans',system-ui,sans-serif",fontWeight:500,
-            cursor:'pointer',textAlign:'left',
-          }}
-            onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.05)'}
-            onMouseLeave={e=>e.currentTarget.style.background='none'}
-          >
-            <span style={{fontSize:15,opacity:0.6}}>←</span> Leave Tournament
-          </button>
-        </div>
-
-        {/* Admin zone */}
-        {isAdmin && (
-          <div style={{padding:'10px 16px 22px',borderTop:'1px solid rgba(255,68,68,0.15)',display:'flex',flexDirection:'column',gap:8}}>
-            <button onClick={() => { setMenuOpen(false); setConfirmDelete(true); }} style={{
-              width:'100%',padding:'11px',borderRadius:8,
-              background:'rgba(255,23,68,0.08)',border:'1px solid rgba(255,23,68,0.35)',
-              color:'#ff4444',fontSize:12,letterSpacing:'0.04em',
-              fontFamily:"'DM Sans',system-ui,sans-serif",fontWeight:700,cursor:'pointer',
-            }}>
-              Delete Tournament
-            </button>
-            <button onClick={() => { setMenuOpen(false); onLogout(); }} style={{
-              width:'100%',padding:'11px',borderRadius:8,
-              background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.12)',
-              color:'rgba(255,255,255,0.45)',fontSize:12,letterSpacing:'0.04em',
-              fontFamily:"'DM Sans',system-ui,sans-serif",fontWeight:700,cursor:'pointer',
-            }}>
-              Logout
-            </button>
+      {/* New tournament modal */}
+      {newTourneyModal && (
+        <div style={{position:'fixed',inset:0,zIndex:10002,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center'}}
+          onMouseDown={e => { if (e.target === e.currentTarget && !newTourneyBusy) setNewTourneyModal(false); }}>
+          <div style={{background:'#060f1e',border:'1px solid rgba(0,200,83,0.25)',borderRadius:12,padding:'28px 24px',width:300,display:'flex',flexDirection:'column',gap:12}}
+            onMouseDown={e => e.stopPropagation()}>
+            <p style={{color:'#fff',fontSize:15,fontWeight:900,margin:0,letterSpacing:'0.05em'}}>New Tournament</p>
+            <Input autoFocus placeholder="Tournament name" value={newTourneyName} onChange={e => setNewTourneyName(e.target.value)}
+              onKeyDown={async e => { if (e.key === 'Enter') await createNewTourney(); }}/>
+            {newTourneyErr && <p style={{color:'#ff4444',fontSize:11,margin:0}}>{newTourneyErr}</p>}
+            <Button disabled={newTourneyBusy} onClick={createNewTourney}>{newTourneyBusy ? '…' : 'Create'}</Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Manage tournament overlay */}
-      {managing && (
-        <div style={{position:'fixed',inset:0,zIndex:10000,background:'rgba(0,0,0,0.85)',overflowY:'auto'}} onClick={() => setManaging(false)}>
-          <div style={{minHeight:'100%',maxWidth:480,margin:'0 auto',padding:'24px 16px',display:'flex',flexDirection:'column',gap:12}} onClick={e => e.stopPropagation()}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <div>
-                <h2 style={{color:'#fff',fontSize:16,fontWeight:900,margin:0,letterSpacing:'0.05em'}}>Manage Tournament</h2>
-                {tournamentName && <p style={{color:'rgba(255,255,255,0.4)',fontSize:11,margin:'2px 0 0',letterSpacing:'0.05em'}}>{tournamentName}</p>}
+      {managing && bracket && (
+        <div style={{position:'fixed',inset:0,zIndex:10002,background:'rgba(0,0,0,0.75)',display:'flex',justifyContent:'flex-end'}}
+          onClick={() => setManaging(false)}>
+          <div style={{
+            width:340,height:'100%',background:'#060f1e',
+            borderLeft:'1px solid rgba(255,255,255,0.1)',
+            display:'flex',flexDirection:'column',overflow:'hidden',
+          }} onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{padding:'18px 18px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)',flexShrink:0}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                <span style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'0.04em',fontFamily:"'DM Sans',system-ui,sans-serif"}}>Manage Tournament</span>
+                <button onClick={() => setManaging(false)} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:18,cursor:'pointer',lineHeight:1,padding:2}}>✕</button>
               </div>
-              <button onClick={() => setManaging(false)} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:20,cursor:'pointer',lineHeight:1}}>✕</button>
+              {tournamentCode && (
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{color:'rgba(255,255,255,0.3)',fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',fontFamily:"'DM Sans',system-ui,sans-serif"}}>Code</span>
+                  <span style={{color:'#00c853',fontSize:16,fontWeight:900,letterSpacing:'0.25em',fontFamily:"'Big Shoulders Display',sans-serif"}}>{tournamentCode}</span>
+                </div>
+              )}
+              {(tournamentName || localStorage.getItem('psc_tname')) && (
+                <div style={{color:'rgba(255,255,255,0.3)',fontSize:10,marginTop:3,letterSpacing:'0.04em'}}>{tournamentName || localStorage.getItem('psc_tname')}</div>
+              )}
             </div>
-            {tournamentCode && (
-              <div style={{background:'rgba(0,200,83,0.08)',border:'1px solid rgba(0,200,83,0.2)',borderRadius:8,padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <span style={{color:'rgba(255,255,255,0.5)',fontSize:10,letterSpacing:'0.15em',textTransform:'uppercase'}}>Tournament Code</span>
-                <span style={{color:'#00c853',fontSize:20,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.25em'}}>{tournamentCode}</span>
-              </div>
-            )}
-            {(() => {
-              const allPlayers = (bracket.r32 || []).flatMap(m => [m.p1, m.p2]);
-              const joined = allPlayers.filter(p => p.name).length;
-              const total = allPlayers.length;
-              return (
-                <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,overflow:'hidden'}}>
-                  <div style={{background:'rgba(255,255,255,0.05)',padding:'6px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#fff',fontSize:11,fontWeight:800,letterSpacing:'0.15em'}}>PLAYERS</span>
-                    <span style={{color:joined===total?'#00c853':'rgba(255,255,255,0.3)',fontSize:10,fontWeight:700}}>{joined}/{total} joined</span>
-                  </div>
-                  {allPlayers.map(p => (
-                    <div key={p.code} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 12px',borderTop:'1px solid rgba(255,255,255,0.04)'}}>
-                      <div style={{width:7,height:7,borderRadius:'50%',background:p.name?'#00c853':'rgba(255,255,255,0.15)',flexShrink:0}}/>
-                      <span style={{fontSize:12,color:p.name?'#fff':'rgba(255,255,255,0.25)',fontWeight:p.name?600:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                        {p.name || 'Empty slot'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
 
-            {pendingMatches.length > 0 && (
-              <div style={{marginTop:8}}>
-                <div style={{color:'#ff6b35',fontSize:10,fontWeight:800,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8,paddingLeft:2}}>
-                  Awaiting Result — {pendingMatches.length} match{pendingMatches.length!==1?'es':''}
-                </div>
-                {pendingMatches.map(({match:m, stage}) => (
-                  <div key={m.id} style={{background:'rgba(255,107,53,0.06)',border:'1px solid rgba(255,107,53,0.25)',borderRadius:8,overflow:'hidden',marginBottom:8}}>
-                    <div style={{background:'rgba(255,107,53,0.1)',padding:'5px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{color:'rgba(255,255,255,0.5)',fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase'}}>{stage}</span>
-                      <span style={{color:'#ff6b35',fontSize:9,fontWeight:700,letterSpacing:'0.1em'}}>BOTH SUBMITTED</span>
+            <div style={{flex:1,overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:14}}>
+
+              {/* ── Teams this round ── */}
+              {(() => {
+                const stage = bracket.stage;
+                if (stage === 'champion') return null;
+                const matches = stage === 'final' ? (bracket.final ? [bracket.final] : []) : (bracket[stage] || []);
+                const slots = matches.flatMap(m => [m.p1, m.p2]).filter(s => s?.name);
+                if (!slots.length) return null;
+                const stageNames = {r32:'Round of 32',r16:'Round of 16',qf:'Quarter-Finals',sf:'Semi-Finals',final:'Final'};
+                return (
+                  <div>
+                    <div style={{color:'rgba(255,255,255,0.35)',fontSize:9,fontWeight:700,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8,fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+                      {stageNames[stage] || stage} — Teams
                     </div>
-                    <div style={{padding:'10px 12px',display:'flex',gap:8}}>
-                      {[m.p1, m.p2].map(player => (
-                        <button key={player.code}
-                          disabled={!!resolvingId}
-                          onClick={() => resolveMatch(m.id, player.code)}
-                          style={{
-                            flex:1,padding:'10px 8px',borderRadius:7,cursor:resolvingId?'default':'pointer',
-                            background:resolvingId===m.id?'rgba(0,200,83,0.05)':'rgba(0,200,83,0.08)',
-                            border:`1px solid ${resolvingId===m.id?'rgba(0,200,83,0.15)':'rgba(0,200,83,0.35)'}`,
-                            color:resolvingId?'rgba(255,255,255,0.3)':'#fff',
-                            fontSize:12,fontWeight:700,fontFamily:"'DM Sans',system-ui,sans-serif",
-                            textAlign:'center',transition:'all 0.15s',
-                          }}
-                          onMouseEnter={e=>{ if(!resolvingId){ e.currentTarget.style.background='rgba(0,200,83,0.18)'; e.currentTarget.style.borderColor='rgba(0,200,83,0.6)'; } }}
-                          onMouseLeave={e=>{ e.currentTarget.style.background='rgba(0,200,83,0.08)'; e.currentTarget.style.borderColor='rgba(0,200,83,0.35)'; }}
-                        >
-                          {resolvingId===m.id ? '...' : player.name}
-                        </button>
+                    <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                      {slots.map(s => (
+                        <div key={s.code} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:6}}>
+                          <div style={{width:7,height:7,borderRadius:'50%',background:s.player?'#00c853':'rgba(255,255,255,0.15)',flexShrink:0}}/>
+                          <span style={{flex:1,fontSize:12,fontWeight:600,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
+                          {s.player
+                            ? <span style={{fontSize:10,color:'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:100}}>{s.player}</span>
+                            : <span style={{fontSize:10,color:'rgba(255,255,255,0.2)',fontStyle:'italic'}}>Unclaimed</span>
+                          }
+                        </div>
                       ))}
                     </div>
-                    <div style={{padding:'0 12px 8px',color:'rgba(255,255,255,0.3)',fontSize:10}}>
-                      Tap a player to advance them to the next round
-                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })()}
 
-            {pendingMatches.length === 0 && (bracket.r32 || []).flatMap(m=>[m.p1,m.p2]).every(p=>p.name) && (
-              <div style={{textAlign:'center',color:'rgba(255,255,255,0.2)',fontSize:11,padding:'16px 0'}}>
-                No matches awaiting a result
-              </div>
-            )}
+              {/* ── All fixtures by round ── */}
+              {(() => {
+                const rounds = [
+                  { key:'r32', label:'Round of 32' },
+                  { key:'r16', label:'Round of 16' },
+                  { key:'qf',  label:'Quarter-Finals' },
+                  { key:'sf',  label:'Semi-Finals' },
+                ];
+                const sections = [];
+                for (const { key, label } of rounds) {
+                  const matches = bracket[key] || [];
+                  if (!matches.length) continue;
+                  sections.push(
+                    <div key={key}>
+                      <div style={{color:'rgba(255,255,255,0.35)',fontSize:9,fontWeight:700,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8,fontFamily:"'DM Sans',system-ui,sans-serif"}}>{label}</div>
+                      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                        {matches.map((m, i) => {
+                          const sel = winnerSelections[m.id] || '';
+                          const busy = resolvingId === m.id;
+                          return (
+                            <div key={m.id} style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${m.played?'rgba(0,200,83,0.2)':'rgba(255,255,255,0.08)'}`,borderRadius:7,overflow:'hidden'}}>
+                              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 10px',background:'rgba(255,255,255,0.03)',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                <span style={{color:'#ff1744',fontSize:8,fontWeight:700,letterSpacing:'0.12em',fontFamily:"'DM Sans',system-ui,sans-serif",textTransform:'uppercase'}}>Match {i+1}</span>
+                                {m.played && <span style={{color:'#00c853',fontSize:9,fontWeight:700}}>✓ {m.winner?.name}</span>}
+                              </div>
+                              <div style={{padding:'7px 10px',display:'flex',alignItems:'center',gap:6,fontSize:11,fontWeight:600}}>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{color:m.played&&m.winner?.code===m.p1?.code?'#00c853':m.played?'rgba(255,255,255,0.3)':'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.p1?.name||'TBD'}</div>
+                                  {m.p1?.player&&<div style={{color:'rgba(255,255,255,0.3)',fontSize:9,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.p1.player}</div>}
+                                </div>
+                                <span style={{color:'rgba(255,255,255,0.2)',fontSize:10,flexShrink:0}}>
+                                  {m.played ? `${m.p1Score??'–'}-${m.p2Score??'–'}` : 'vs'}
+                                </span>
+                                <div style={{flex:1,minWidth:0,textAlign:'right'}}>
+                                  <div style={{color:m.played&&m.winner?.code===m.p2?.code?'#00c853':m.played?'rgba(255,255,255,0.3)':'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.p2?.name||'TBD'}</div>
+                                  {m.p2?.player&&<div style={{color:'rgba(255,255,255,0.3)',fontSize:9,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.p2.player}</div>}
+                                </div>
+                              </div>
+                              <div style={{padding:'0 10px 8px'}}>
+                                <WatchUrlInput matchId={m.id} initialUrl={m.watchUrl} placeholder="Rise 360 URL…"/>
+                              </div>
+                              {!m.played && m.p1?.name && m.p2?.name && (
+                                <div style={{padding:'0 10px 10px',display:'flex',gap:6}}>
+                                  <select value={sel} onChange={e => setWinnerSelections(prev => ({...prev,[m.id]:e.target.value}))}
+                                    style={{flex:1,borderRadius:6,fontSize:11,padding:'5px 8px',background:'#0a1628',border:'1px solid rgba(255,255,255,0.15)',color:sel?'#fff':'rgba(255,255,255,0.4)',outline:'none',cursor:'pointer',fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+                                    <option value="">Winner…</option>
+                                    <option value={m.p1.code}>{m.p1.name}</option>
+                                    <option value={m.p2.code}>{m.p2.name}</option>
+                                  </select>
+                                  <button disabled={!sel||busy} onClick={() => resolveMatch(m.id, sel)}
+                                    style={{padding:'5px 12px',borderRadius:6,fontSize:11,fontWeight:700,cursor:sel&&!busy?'pointer':'default',background:sel?'rgba(0,200,83,0.2)':'rgba(255,255,255,0.05)',border:`1px solid ${sel?'rgba(0,200,83,0.5)':'rgba(255,255,255,0.1)'}`,color:sel?'#00c853':'rgba(255,255,255,0.3)',fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+                                    {busy?'…':'Confirm'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                // Final
+                if (bracket.final) {
+                  const m = bracket.final;
+                  const sel = winnerSelections[m.id] || '';
+                  const busy = resolvingId === m.id;
+                  sections.push(
+                    <div key="final">
+                      <div style={{color:'rgba(255,255,255,0.35)',fontSize:9,fontWeight:700,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8,fontFamily:"'DM Sans',system-ui,sans-serif"}}>Final</div>
+                      <div style={{background:'rgba(255,200,0,0.05)',border:`1px solid ${m.played?'rgba(0,200,83,0.3)':'rgba(255,200,0,0.2)'}`,borderRadius:7,overflow:'hidden'}}>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 10px',background:'rgba(255,255,255,0.03)',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                          <span style={{color:'#ffc107',fontSize:8,fontWeight:700,letterSpacing:'0.12em',fontFamily:"'DM Sans',system-ui,sans-serif",textTransform:'uppercase'}}>Final</span>
+                          {m.played && <span style={{color:'#00c853',fontSize:9,fontWeight:700}}>✓ {m.winner?.name}</span>}
+                        </div>
+                        <div style={{padding:'7px 10px',display:'flex',alignItems:'center',gap:6,fontSize:11,fontWeight:600}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{color:m.played&&m.winner?.code===m.p1?.code?'#00c853':m.played?'rgba(255,255,255,0.3)':'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.p1?.name||'TBD'}</div>
+                            {m.p1?.player&&<div style={{color:'rgba(255,255,255,0.3)',fontSize:9,marginTop:1}}>{m.p1.player}</div>}
+                          </div>
+                          <span style={{color:'rgba(255,255,255,0.2)',fontSize:10,flexShrink:0}}>{m.played?`${m.p1Score??'–'}-${m.p2Score??'–'}`:'vs'}</span>
+                          <div style={{flex:1,minWidth:0,textAlign:'right'}}>
+                            <div style={{color:m.played&&m.winner?.code===m.p2?.code?'#00c853':m.played?'rgba(255,255,255,0.3)':'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.p2?.name||'TBD'}</div>
+                            {m.p2?.player&&<div style={{color:'rgba(255,255,255,0.3)',fontSize:9,marginTop:1}}>{m.p2.player}</div>}
+                          </div>
+                        </div>
+                        <div style={{padding:'0 10px 8px'}}>
+                          <WatchUrlInput matchId={m.id} initialUrl={m.watchUrl} placeholder="Rise 360 URL…"/>
+                        </div>
+                        {!m.played && m.p1?.name && m.p2?.name && (
+                          <div style={{padding:'0 10px 10px',display:'flex',gap:6}}>
+                            <select value={sel} onChange={e => setWinnerSelections(prev => ({...prev,[m.id]:e.target.value}))}
+                              style={{flex:1,borderRadius:6,fontSize:11,padding:'5px 8px',background:'#0a1628',border:'1px solid rgba(255,255,255,0.15)',color:sel?'#fff':'rgba(255,255,255,0.4)',outline:'none',cursor:'pointer',fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+                              <option value="">Winner…</option>
+                              <option value={m.p1.code}>{m.p1.name}</option>
+                              <option value={m.p2.code}>{m.p2.name}</option>
+                            </select>
+                            <button disabled={!sel||busy} onClick={() => resolveMatch(m.id, sel)}
+                              style={{padding:'5px 12px',borderRadius:6,fontSize:11,fontWeight:700,cursor:sel&&!busy?'pointer':'default',background:sel?'rgba(0,200,83,0.2)':'rgba(255,255,255,0.05)',border:`1px solid ${sel?'rgba(0,200,83,0.5)':'rgba(255,255,255,0.1)'}`,color:sel?'#00c853':'rgba(255,255,255,0.3)',fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+                              {busy?'…':'Confirm'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+                return sections;
+              })()}
+
+            </div>
           </div>
         </div>
       )}
@@ -2269,15 +2633,98 @@ function TournamentScreen({ bracket, myCode, tournamentCode, tournamentName, sta
         </div>
       </div>
 
-      {/* Bracket tree */}
-      <BracketTree bracket={bracket} myCode={myCode} onMatchClick={openMatch}/>
+      {/* Bracket tree + admin URL panel */}
+      {bracket ? (
+        <div style={{display:'flex',alignItems:'flex-start'}}>
+          <div style={{flex:1,minWidth:0}}>
+            <BracketTree bracket={bracket} myCode={myCode} onMatchClick={openMatch}/>
+          </div>
+          {isAdmin && (
+            <div style={{
+              width:220,flexShrink:0,
+              borderLeft:'1px solid rgba(255,255,255,0.07)',
+              background:'rgba(3,13,26,0.95)',
+              minHeight:'calc(100vh - 53px)',
+              padding:'12px 10px',
+              display:'flex',flexDirection:'column',gap:6,
+            }}>
+              <div style={{color:'rgba(255,255,255,0.35)',fontSize:8,letterSpacing:'0.2em',textTransform:'uppercase',fontWeight:700,marginBottom:4,fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+                {['r32','r16','qf','sf','final'].includes(bracket.stage) ? {r32:'Round of 32',r16:'Round of 16',qf:'Quarter-Finals',sf:'Semi-Finals',final:'Final'}[bracket.stage] : 'Matches'} · URLs
+              </div>
+              {(bracket.stage === 'final' ? [bracket.final].filter(Boolean) : (bracket[bracket.stage] || [])).map((m, i) => {
+                const num = m.id === 'final' ? null : i + 1;
+                return (
+                  <div key={m.id} style={{display:'flex',flexDirection:'column',gap:4,padding:'8px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:6}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                      {num && <span style={{color:'#ff1744',fontSize:8,fontWeight:700,letterSpacing:'0.12em',fontFamily:"'DM Sans',system-ui,sans-serif",textTransform:'uppercase'}}>Match {num}</span>}
+                      {m.played && <span style={{color:'#00c853',fontSize:8,fontWeight:700}}>✓</span>}
+                    </div>
+                    <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.7)',display:'flex',gap:4,alignItems:'center'}}>
+                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.p1?.name||'TBD'}</span>
+                      <span style={{color:'rgba(255,255,255,0.25)',flexShrink:0,fontSize:9}}>vs</span>
+                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'right'}}>{m.p2?.name||'TBD'}</span>
+                    </div>
+                    <WatchUrlInput matchId={m.id} initialUrl={m.watchUrl} placeholder="Rise 360 URL…"/>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'60vh',gap:12,opacity:0.5}}>
+          <div style={{color:'#fff',fontSize:16,fontWeight:700,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.1em',textTransform:'uppercase'}}>No Active Tournament</div>
+          {isAdmin && <div style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>Create one via the menu</div>}
+        </div>
+      )}
 
-      {submitMatch && (
-        <SubmitMatchScreen
-          match={submitMatch}
-          myCode={myCode}
-          onClose={() => setSubmitMatch(null)}
+      {needsPick && (
+        <TeamPicker
+          bracket={bracket}
+          playerName={playerName}
+          onPicked={code => setMyCode(code)}
         />
+      )}
+
+      {/* Code entry — shown when no saved tournament code */}
+      {needsCode && (
+        <div style={{position:'fixed',inset:0,zIndex:10003,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}}>
+          <div style={{width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{textAlign:'center'}}>
+              <p style={{color:'#ff1744',fontSize:9,letterSpacing:'0.3em',textTransform:'uppercase',fontWeight:700,margin:0}}>DAF World Cup 2026</p>
+              <p style={{color:'#fff',fontSize:22,fontWeight:900,fontFamily:"'Big Shoulders Display',sans-serif",letterSpacing:'0.05em',textTransform:'uppercase',margin:'6px 0 0'}}>Enter Tournament Code</p>
+              <p style={{color:'rgba(255,255,255,0.35)',fontSize:12,margin:'6px 0 0'}}>Get the 4-letter code from your admin</p>
+            </div>
+            <input
+              autoFocus
+              maxLength={4}
+              placeholder="e.g. ABCD"
+              value={codeInput}
+              onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeErr(''); }}
+              onKeyDown={e => e.key === 'Enter' && submitCode()}
+              style={{
+                width:'100%',padding:'14px 16px',borderRadius:8,fontSize:22,fontWeight:800,
+                letterSpacing:'0.3em',textAlign:'center',textTransform:'uppercase',
+                background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.2)',
+                color:'#fff',outline:'none',fontFamily:"'DM Sans',system-ui,sans-serif",
+              }}
+            />
+            {codeErr && <p style={{color:'#ff4444',fontSize:12,margin:0,textAlign:'center'}}>{codeErr}</p>}
+            <button onClick={submitCode} style={{
+              padding:'13px',borderRadius:8,fontSize:14,fontWeight:800,letterSpacing:'0.05em',
+              background:'linear-gradient(135deg,#00c853,#00a651)',border:'none',color:'#000',cursor:'pointer',
+              fontFamily:"'DM Sans',system-ui,sans-serif",
+            }}>
+              Load Tournament →
+            </button>
+            <button onClick={() => { setAdminPrompt(true); setAdminEmail(''); setAdminPass(''); setAdminErr(''); }} style={{
+              background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:11,cursor:'pointer',
+              letterSpacing:'0.05em',fontFamily:"'DM Sans',system-ui,sans-serif",
+            }}>
+              Admin? Log in instead
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -2324,15 +2771,10 @@ export default function App() {
         const data = await fetch('/api/state', { signal: AbortSignal.timeout(3000) }).then(r => r.json());
         if (!cancelled) {
           setServerState(data);
-          setScreen(prev => {
-            if (prev !== 'loading') return prev;
-            if (myCode) return 'tournament';
-            if (sessionStorage.getItem('psc_admin') && data?.bracket) return 'tournament';
-            return 'login';
-          });
+          setScreen(prev => prev === 'loading' ? 'tournament' : prev);
         }
       } catch (_) {
-        if (!cancelled) setScreen(prev => prev === 'loading' ? 'login' : prev);
+        if (!cancelled) setScreen(prev => prev === 'loading' ? 'tournament' : prev);
       }
     };
     poll();
@@ -2376,11 +2818,10 @@ export default function App() {
     localStorage.removeItem('psc_name');
     localStorage.removeItem('psc_tcode');
     localStorage.removeItem('psc_tname');
-    setScreen('login');
   };
 
   const handleCPU = (name) => {
-    setCpuName(name);
+    setCpuName(name || 'Player');
     setScreen('cpu');
   };
 
@@ -2391,8 +2832,24 @@ export default function App() {
     localStorage.removeItem('psc_name');
     localStorage.removeItem('psc_tcode');
     localStorage.removeItem('psc_tname');
-    setScreen('login');
   };
+
+  const handleAdminLogin = () => {
+    setAdminSession(true);
+    setMyCode(null);
+    setStartManaging(false);
+  };
+
+  const handleTournamentCreated = (tcode, tname) => {
+    if (tcode) localStorage.setItem('psc_tcode', tcode);
+    if (tname) localStorage.setItem('psc_tname', tname);
+    setAdminSession(true);
+    setMyCode(null);
+  };
+
+  // Forces a re-render after code is saved to localStorage
+  const [codeKey, setCodeKey] = useState(0);
+  const handleCodeEntered = () => setCodeKey(k => k + 1);
 
   const W = { height:'100%', overflow:'hidden', background:'#030d1a url(/bg.png) center/cover no-repeat fixed' };
   const bracket = serverState?.bracket;
@@ -2459,37 +2916,38 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'login' && (
-        <div style={{height:'100%',overflowY:'auto'}}>
-          <LoginScreen serverState={serverState} onJoined={handleJoined} onCPU={handleCPU} onAdminView={handleAdminView} onAdminManage={handleAdminManage}/>
-        </div>
-      )}
-
       {screen === 'cpu' && (
         <div style={W}>
           <CPUBracketScreen
             playerName={cpuName || localStorage.getItem('psc_name') || 'Player'}
-            onExit={() => setScreen('login')}
+            onExit={() => setScreen('tournament')}
           />
         </div>
       )}
 
-      {screen === 'tournament' && bracket && (
+      {screen === 'tournament' && (
         <div style={W}>
           <TournamentScreen
+            key={codeKey}
             bracket={bracket}
             myCode={myCode}
+            setMyCode={setMyCode}
+            isAdmin={adminSession}
             tournamentCode={serverState?.tournamentCode || localStorage.getItem('psc_tcode')}
             tournamentName={serverState?.tournamentName || localStorage.getItem('psc_tname')}
             startManaging={startManaging}
-            onBack={() => {
+            onLeave={() => {
               setMyCode(null);
               localStorage.removeItem('psc_code');
               localStorage.removeItem('psc_name');
-              setScreen('login');
             }}
             onLogout={handleAdminLogout}
             onDeleteTournament={handleReset}
+            onCPU={handleCPU}
+            onJoined={(code) => setMyCode(code)}
+            onAdminLogin={handleAdminLogin}
+            onTournamentCreated={handleTournamentCreated}
+            onCodeEntered={handleCodeEntered}
           />
         </div>
       )}

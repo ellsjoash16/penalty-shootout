@@ -15,13 +15,10 @@ export default async function handler(req, res) {
     await atomicUpdate(state => {
       if (state.bracket) throw { status: 409, error: 'tournament already exists — ask the organiser for your code' };
 
-      const bracket = genBracket(isAdmin ? null : name);
+      const bracket = genBracket();
       const tournamentCode = genCode();
-      const mySlot = isAdmin ? null : bracket.groups
-        .flatMap(g => g.players)
-        .find(p => p.name === name);
 
-      result = { code: mySlot?.code ?? null, tournamentCode, tournamentName };
+      result = { code: null, tournamentCode, tournamentName };
       return { bracket, activeMatch: null, tournamentCode, tournamentName };
     });
   } catch (e) {
