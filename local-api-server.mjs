@@ -22,16 +22,19 @@ const ROUTES = {
   '/api/tournament/create':() => import('./api/tournament/create.js'),
   '/api/tournament/reset': () => import('./api/tournament/reset.js'),
   '/api/tournament/seed-nations': () => import('./api/tournament/seed-nations.js'),
+  '/api/sync-standings':          () => import('./api/sync-standings.js'),
   '/api/tournament/claim-team':   () => import('./api/tournament/claim-team.js'),
-  '/api/tournament/patch-teams':  () => import('./api/tournament/patch-teams.js'),
-  '/api/sweepstake/assign':           () => import('./api/sweepstake/assign.js'),
-  '/api/sweepstake/update-team':      () => import('./api/sweepstake/update-team.js'),
-  '/api/sweepstake/remove-participant': () => import('./api/sweepstake/remove-participant.js'),
-  '/api/match/start':      () => import('./api/match/start.js'),
-  '/api/match/choice':     () => import('./api/match/choice.js'),
-  '/api/match/submit':     () => import('./api/match/submit.js'),
-  '/api/match/resolve':    () => import('./api/match/resolve.js'),
-  '/api/match/watchurl':   () => import('./api/match/watchurl.js'),
+  '/api/sweepstake/create':             () => import('./api/sweepstake/[action].js'),
+  '/api/sweepstake/delete-sweepstake': () => import('./api/sweepstake/[action].js'),
+  '/api/sweepstake/rename':            () => import('./api/sweepstake/[action].js'),
+  '/api/sweepstake/assign':            () => import('./api/sweepstake/[action].js'),
+  '/api/sweepstake/update-team':       () => import('./api/sweepstake/[action].js'),
+  '/api/sweepstake/remove-participant':() => import('./api/sweepstake/[action].js'),
+  '/api/sweepstake/rename-participant':() => import('./api/sweepstake/[action].js'),
+  '/api/match/choice':     () => import('./api/match/[action].js'),
+  '/api/match/submit':     () => import('./api/match/[action].js'),
+  '/api/match/resolve':    () => import('./api/match/[action].js'),
+  '/api/match/watchurl':   () => import('./api/match/[action].js'),
 };
 
 const server = createServer(async (req, res) => {
@@ -61,12 +64,15 @@ const server = createServer(async (req, res) => {
   req.on('end', async () => {
     try {
       const parsedBody = body ? JSON.parse(body) : {};
+      // Extract dynamic [action] segment from paths like /api/match/choice
+      const segments = url.pathname.split('/');
+      const action = segments[segments.length - 1];
       const reqObj = {
         method: req.method,
         url: req.url,
         headers: req.headers,
         body: parsedBody,
-        query: Object.fromEntries(url.searchParams),
+        query: { ...Object.fromEntries(url.searchParams), action },
       };
 
       let sent = false;
