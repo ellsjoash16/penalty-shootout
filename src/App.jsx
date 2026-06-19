@@ -4219,9 +4219,16 @@ export default function App() {
   const [globalAdminPass, setGlobalAdminPass] = useState('');
   const [globalAdminErr, setGlobalAdminErr] = useState('');
 
-  // Poll server state every 1.5s
+  // Poll server state — fast during active match, slow otherwise
+  const serverStateRef = useRef(null);
+  useEffect(() => { serverStateRef.current = serverState; }, [serverState]);
   useEffect(() => {
     let cancelled = false;
+    let timer = null;
+    const schedule = () => {
+      const interval = serverStateRef.current?.activeMatch ? 1500 : 5000;
+      timer = setTimeout(poll, interval);
+    };
     const poll = async () => {
       if (cancelled) return;
       try {
@@ -4233,10 +4240,10 @@ export default function App() {
       } catch (_) {
         if (!cancelled) setScreen(prev => prev === 'loading' ? 'tournament' : prev);
       }
+      if (!cancelled) schedule();
     };
     poll();
-    const id = setInterval(poll, 5000);
-    return () => { cancelled = true; clearInterval(id); };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, []);
 
   // Navigate to champion screen when tournament ends
