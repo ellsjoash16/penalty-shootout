@@ -2559,7 +2559,7 @@ function TeamProgressEditor({ team, td, color, onSave }) {
 
 const TIER3_PLUS_TEAMS = SWEEPSTAKE_TIERS.filter(t => t.tier >= 3).flatMap(t => t.teams);
 
-function SweepstakeAdminPanel({ sweepstakes, onClose }) {
+function SweepstakeAdminPanel({ sweepstakes, onClose, onRefresh }) {
   const [selectedId, setSelectedId] = useState(() => sweepstakes?.[0]?.id || null);
   const [newName, setNewName]       = useState('');
   const [newSwName, setNewSwName]   = useState('');
@@ -2587,7 +2587,8 @@ function SweepstakeAdminPanel({ sweepstakes, onClose }) {
     setBusy(true);
     const res = await api('/api/sweepstake/create', { name: n });
     if (res.id) setSelectedId(res.id);
-    setNewSwName(''); setShowNewSw(false); setBusy(false);
+    setNewSwName(''); setShowNewSw(false);
+    await onRefresh?.(); setBusy(false);
   };
 
   const renameSweepstake = async () => {
@@ -2595,7 +2596,8 @@ function SweepstakeAdminPanel({ sweepstakes, onClose }) {
     if (!n || !renamingId || busy) return;
     setBusy(true);
     await api('/api/sweepstake/rename', { sweepstakeId: renamingId, name: n });
-    setRenamingId(null); setBusy(false);
+    setRenamingId(null);
+    await onRefresh?.(); setBusy(false);
   };
 
   const deleteSweepstake = async () => {
@@ -2605,7 +2607,7 @@ function SweepstakeAdminPanel({ sweepstakes, onClose }) {
     await api('/api/sweepstake/delete-sweepstake', { sweepstakeId });
     const remaining = sweepstakes?.filter(s => s.id !== sweepstakeId);
     setSelectedId(remaining?.[0]?.id || null);
-    setBusy(false);
+    await onRefresh?.(); setBusy(false);
   };
 
   const addParticipant = async () => {
@@ -2613,14 +2615,15 @@ function SweepstakeAdminPanel({ sweepstakes, onClose }) {
     if (!n || busy || !sweepstakeId) return;
     setBusy(true);
     await api('/api/sweepstake/assign', { sweepstakeId, participantName: n, teams: [] });
-    setNewName(''); setBusy(false);
+    setNewName('');
+    await onRefresh?.(); setBusy(false);
   };
 
   const removeParticipant = async name => {
     if (!sweepstakeId) return;
     setBusy(true);
     await api('/api/sweepstake/remove-participant', { sweepstakeId, participantName: name });
-    setBusy(false);
+    await onRefresh?.(); setBusy(false);
   };
 
   const renameParticipant = async () => {
@@ -2630,6 +2633,7 @@ function SweepstakeAdminPanel({ sweepstakes, onClose }) {
     await api('/api/sweepstake/rename-participant', { sweepstakeId, oldName: renamingParticipant, newName: n });
     if (editingP === renamingParticipant) setEditingP(n);
     setRenamingParticipant(null);
+    await onRefresh?.();
     setBusy(false);
   };
 
@@ -2637,7 +2641,8 @@ function SweepstakeAdminPanel({ sweepstakes, onClose }) {
     if (!editingP || !sweepstakeId) return;
     setBusy(true);
     await api('/api/sweepstake/assign', { sweepstakeId, participantName: editingP, teams: editTeams });
-    setEditingP(null); setBusy(false);
+    setEditingP(null);
+    await onRefresh?.(); setBusy(false);
   };
 
   const toggleTeam = team => setEditTeams(prev => prev.includes(team) ? prev.filter(t => t !== team) : [...prev, team]);
@@ -4138,7 +4143,7 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
         </div>
       )}
       {managingSweepstake && (
-        <SweepstakeAdminPanel sweepstakes={sweepstakes} onClose={() => setManagingSweepstake(false)}/>
+        <SweepstakeAdminPanel sweepstakes={sweepstakes} onClose={() => setManagingSweepstake(false)} onRefresh={refreshState}/>
       )}
 
       {submitMatch && (
@@ -4218,6 +4223,13 @@ export default function App() {
   const [globalAdminEmail, setGlobalAdminEmail] = useState('');
   const [globalAdminPass, setGlobalAdminPass] = useState('');
   const [globalAdminErr, setGlobalAdminErr] = useState('');
+
+  const refreshState = useCallback(async () => {
+    try {
+      const data = await fetch('/api/state', { cache: 'no-store' }).then(r => r.json());
+      setServerState(data);
+    } catch (_) {}
+  }, []);
 
   // Poll server state — fast during active match, slow otherwise
   const serverStateRef = useRef(null);
