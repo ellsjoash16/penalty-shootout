@@ -3575,7 +3575,7 @@ function HomeScreen({ serverState, onSelect, onAdminLogin, isAdmin }) {
 // TOURNAMENT SCREEN
 // ═══════════════════════════════════════════════════════════════
 
-function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, sweepstakes, tournamentCode, tournamentName, startManaging, initialSwMode, onHome, onLeave, onLogout, onDeleteTournament, onCPU, onJoined, onAdminLogin, onTournamentCreated, onCodeEntered }) {
+function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, sweepstakes, tournamentCode, tournamentName, startManaging, initialSwMode, onHome, onLeave, onLogout, onDeleteTournament, onCPU, onJoined, onAdminLogin, onTournamentCreated, onCodeEntered, onRefresh }) {
   const [submitMatchId, setSubmitMatchId] = useState(null);
   const submitMatch = submitMatchId ? (() => {
     const all = [...(bracket?.r32||[]), ...(bracket?.r16||[]), ...(bracket?.qf||[]), ...(bracket?.sf||[]), ...(bracket?.final ? [bracket.final] : [])];
@@ -4143,7 +4143,7 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
         </div>
       )}
       {managingSweepstake && (
-        <SweepstakeAdminPanel sweepstakes={sweepstakes} onClose={() => setManagingSweepstake(false)} onRefresh={refreshState}/>
+        <SweepstakeAdminPanel sweepstakes={sweepstakes} onClose={() => setManagingSweepstake(false)} onRefresh={onRefresh}/>
       )}
 
       {submitMatch && (
@@ -4404,6 +4404,7 @@ export default function App() {
             onAdminLogin={handleAdminLogin}
             onTournamentCreated={handleTournamentCreated}
             onCodeEntered={handleCodeEntered}
+            onRefresh={refreshState}
           />
         </div>
       )}
