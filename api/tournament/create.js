@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       const tournamentCode = genCode();
 
       result = { code: null, tournamentCode, tournamentName };
-      return { bracket, activeMatch: null, tournamentCode, tournamentName };
+      return { ...state, bracket, activeMatch: null, tournamentCode, tournamentName };
     });
   } catch (e) {
     if (e?.status) return res.status(e.status).json({ error: e.error });

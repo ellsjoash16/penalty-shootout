@@ -9,6 +9,14 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'EA Sans Curves';
+  src: url('/EASansCurvesRegular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --background: 214 80% 4%;
