@@ -3601,9 +3601,9 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
   const [menuOpen, setMenuOpen] = useState(false);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [managing, setManaging] = useState(!!startManaging);
-  const [swMode, setSwMode] = useState(initialSwMode || 'bracket');
+  const [swMode, setSwMode] = useState(isAdmin ? (initialSwMode || 'bracket') : 'sweepstake');
   const [selectedSwId, setSelectedSwId] = useState(null);
-  useEffect(() => { setSwMode(initialSwMode || 'bracket'); }, [initialSwMode]);
+  useEffect(() => { setSwMode(isAdmin ? (initialSwMode || 'bracket') : 'sweepstake'); }, [initialSwMode, isAdmin]);
   useEffect(() => { if (swMode !== 'sweepstake') setSelectedSwId(null); }, [swMode]);
   const needsCode = !isAdmin && !localStorage.getItem('psc_tcode') && swMode !== 'sweepstake';
   const needsPick = !isAdmin && swMode !== 'sweepstake' && !!bracket && bracket.stage !== 'champion' && (() => {
@@ -4157,9 +4157,9 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
           <span style={{fontSize:10,fontWeight:800,letterSpacing:'0.12em',textTransform:'uppercase',fontFamily:"'DM Sans',system-ui,sans-serif"}}>Home</span>
         </button>
         {[
-          ['bracket','Penalties', <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 2c.93 0 1.84.13 2.7.37l-1.1 3.38-1.6.52-1.6-.52-1.1-3.38A7.97 7.97 0 0 1 12 4zM4.27 16.17l2.96-2.15 1.63.53.6 1.95-1.8 2.47a8.04 8.04 0 0 1-3.39-2.8zm3.39 4.06 1.8-2.47h2.08l1.8 2.47a8.02 8.02 0 0 1-5.68 0zm7.08-.26-1.8-2.47.6-1.95 1.63-.53 2.96 2.15a8.04 8.04 0 0 1-3.39 2.8zm4.07-4.34-2.45-1.78.6-4.1 3.07-1V9c0 1.13-.24 2.2-.66 3.17l-.56 2.66zM12 9.5l1.56 1.13-.6 4.1H11.04l-.6-4.1L12 9.5zm-4.92-.55 3.07 1 .6 4.1-2.45 1.78-.56-2.66A7.98 7.98 0 0 1 7 9v-.05h.08zM19.6 7.9l-3.07 1-1.6-.52-1.1-3.38A7.99 7.99 0 0 1 19.6 7.9z"/></svg>],
+          isAdmin && ['bracket','Penalties', <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 2c.93 0 1.84.13 2.7.37l-1.1 3.38-1.6.52-1.6-.52-1.1-3.38A7.97 7.97 0 0 1 12 4zM4.27 16.17l2.96-2.15 1.63.53.6 1.95-1.8 2.47a8.04 8.04 0 0 1-3.39-2.8zm3.39 4.06 1.8-2.47h2.08l1.8 2.47a8.02 8.02 0 0 1-5.68 0zm7.08-.26-1.8-2.47.6-1.95 1.63-.53 2.96 2.15a8.04 8.04 0 0 1-3.39 2.8zm4.07-4.34-2.45-1.78.6-4.1 3.07-1V9c0 1.13-.24 2.2-.66 3.17l-.56 2.66zM12 9.5l1.56 1.13-.6 4.1H11.04l-.6-4.1L12 9.5zm-4.92-.55 3.07 1 .6 4.1-2.45 1.78-.56-2.66A7.98 7.98 0 0 1 7 9v-.05h.08zM19.6 7.9l-3.07 1-1.6-.52-1.1-3.38A7.99 7.99 0 0 1 19.6 7.9z"/></svg>],
           ['sweepstake','Sweepstake', <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 3H4v5c0 1.66 1.34 3 3 3s3-1.34 3-3V3H7zm0 6c-.55 0-1-.45-1-1V5h2v3c0 .55-.45 1-1 1zm10-6h-3v5c0 1.66 1.34 3 3 3s3-1.34 3-3V3h-3zm0 6c-.55 0-1-.45-1-1V5h2v3c0 .55-.45 1-1 1zm-5 4v2H9v2h2v4h2v-4h2v-2h-3v-2c2.76 0 5-2.24 5-5H5c0 2.76 2.24 5 5 5h2z"/></svg>],
-        ].map(([mode,label,icon]) => (
+        ].filter(Boolean).map(([mode,label,icon]) => (
           <button key={mode} onClick={() => { setMenuOpen(false); setSwMode(mode); }} style={{
             flex:1,border:'none',background:'none',cursor:'pointer',
             display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,
