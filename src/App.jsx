@@ -64,7 +64,7 @@ const computeGroupWinners = (teamData) => {
       return gdb - gda;
     });
     const top = sorted[0];
-    if (top && teams.every(t => (teamData[t]?.groupPlayed ?? 0) >= 3)) winners.add(top);
+    if (top && (teamData[top]?.groupPlayed ?? 0) >= 3) winners.add(top);
   });
   return winners;
 };
