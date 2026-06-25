@@ -2705,6 +2705,7 @@ function SweepstakeAdminPanel({ sweepstakes, onClose, onRefresh }) {
               setSyncing(true); setSyncMsg('');
               try {
                 const r = await api('/api/sync-standings');
+                if (r.ok) { await onRefresh?.(); }
                 setSyncMsg(r.ok ? `Synced — ${r.groupsUpdated} teams, ${r.knockoutUpdated} knockout` : (r.error || 'Error'));
               } catch { setSyncMsg('Failed'); }
               setSyncing(false);
