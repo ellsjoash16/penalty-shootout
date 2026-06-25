@@ -3465,9 +3465,9 @@ function HomeScreen({ serverState, onSelect, onAdminLogin, isAdmin }) {
       </div>
 
       {/* Cards — side by side */}
-      <div className="relative z-10 grid grid-cols-2 gap-4 px-5 pb-5 flex-1 min-h-0">
-        {/* Penalties card */}
-        <Card
+      <div className={`relative z-10 grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-4 px-5 pb-5 flex-1 min-h-0`}>
+        {/* Penalties card — admin only */}
+        {isAdmin && <Card
           onClick={() => onSelect('bracket')}
           className="home-card cursor-pointer"
           style={{background:'rgba(4,16,32,0.88)',border:'1px solid rgba(255,255,255,0.15)',borderTop:'4px solid rgba(255,255,255,0.9)',borderRadius:16,position:'relative',overflow:'hidden',}}
@@ -3488,7 +3488,7 @@ function HomeScreen({ serverState, onSelect, onAdminLogin, isAdmin }) {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Sweepstake card */}
         <Card
@@ -3601,9 +3601,9 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
   const [menuOpen, setMenuOpen] = useState(false);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [managing, setManaging] = useState(!!startManaging);
-  const [swMode, setSwMode] = useState(initialSwMode || 'bracket');
+  const [swMode, setSwMode] = useState(!isAdmin ? 'sweepstake' : (initialSwMode || 'bracket'));
   const [selectedSwId, setSelectedSwId] = useState(null);
-  useEffect(() => { setSwMode(initialSwMode || 'bracket'); }, [initialSwMode]);
+  useEffect(() => { setSwMode(!isAdmin ? 'sweepstake' : (initialSwMode || 'bracket')); }, [initialSwMode, isAdmin]);
   useEffect(() => { if (swMode !== 'sweepstake') setSelectedSwId(null); }, [swMode]);
   const needsCode = !isAdmin && !localStorage.getItem('psc_tcode') && swMode !== 'sweepstake';
   const needsPick = !isAdmin && swMode !== 'sweepstake' && !!bracket && bracket.stage !== 'champion' && (() => {
