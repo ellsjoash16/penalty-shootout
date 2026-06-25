@@ -3681,7 +3681,8 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
       <StadiumBg/>
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-        <SheetContent side="left" className="w-64 flex flex-col p-0 gap-0 overflow-hidden border-r border-white/[0.08] z-[200]" style={{background:'#040e1c'}}>
+        <SheetContent side="left" className="w-64 flex flex-col p-0 gap-0 overflow-hidden border-r border-white/[0.08] z-[200]" style={{background:'#040e1c'}} aria-describedby={undefined}>
+          <SheetTitle className="sr-only">{tournamentName || 'DAF World Cup 2026'} — Menu</SheetTitle>
 
           {/* Header */}
           <div style={{position:'relative',padding:'20px 16px 16px',background:'linear-gradient(160deg,rgba(0,200,83,0.13) 0%,transparent 65%)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
