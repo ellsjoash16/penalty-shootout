@@ -53,13 +53,28 @@ const SW_ROUNDS      = ['r32','r16','qf','sf','runner_up','winner'];
 const SW_ROUND_PTS   = { r32:5, r16:10, qf:20, sf:35, runner_up:50, winner:100 };
 const SW_ROUND_LABELS = { r32:'Round of 32', r16:'Round of 16', qf:'Quarter-Final', sf:'Semi-Final', runner_up:'Runner-up', winner:'Winner' };
 const SW_ROUND_SHORT  = { r32:'R32', r16:'R16', qf:'QF', sf:'SF', runner_up:'Final', winner:'WINNER' };
-const swTeamPts = td => {
+const computeGroupWinners = (teamData) => {
+  const winners = new Set();
+  Object.values(WC_GROUPS).forEach(teams => {
+    if (!teams.every(t => (teamData[t]?.groupPlayed ?? 0) >= 3)) return;
+    const sorted = [...teams].sort((a, b) => {
+      const pts = (teamData[b]?.groupPts || 0) - (teamData[a]?.groupPts || 0);
+      if (pts !== 0) return pts;
+      const gda = (teamData[a]?.groupGF || 0) - (teamData[a]?.groupGA || 0);
+      const gdb = (teamData[b]?.groupGF || 0) - (teamData[b]?.groupGA || 0);
+      return gdb - gda;
+    });
+    if (sorted[0]) winners.add(sorted[0]);
+  });
+  return winners;
+};
+const swTeamPts = (td, isGroupWinner = false) => {
   if (!td) return 0;
   let pts = 0;
   const idx = SW_ROUNDS.indexOf(td.reached);
   if (idx >= 0) for (let i = 0; i <= idx; i++) pts += SW_ROUND_PTS[SW_ROUNDS[i]];
   if (td.topScorer) pts += 15;
-  if (td.groupWinner) pts += 10;
+  if (isGroupWinner) pts += 10;
   pts += (td.cleanSheets || 0) * 5;
   pts += (td.wins || 0) * 3;
   pts += (td.draws || 0) * 1;
@@ -67,8 +82,10 @@ const swTeamPts = td => {
   pts += (td.firstGoals || 0) * 2;
   return pts;
 };
-const swParticipantPts = (p, teamData) =>
-  (p.teams || []).reduce((sum, t) => sum + swTeamPts(teamData?.[t]), 0);
+const swParticipantPts = (p, teamData) => {
+  const winners = computeGroupWinners(teamData);
+  return (p.teams || []).reduce((sum, t) => sum + swTeamPts(teamData?.[t], winners.has(t)), 0);
+};
 
 const WC_GROUPS = {
   A: ['Mexico','South Africa','South Korea','Czechia'],
@@ -2482,7 +2499,6 @@ function TeamProgressEditor({ team, td, color, onSave }) {
   const [cleanSheets, setCleanSheets]   = useState(td?.cleanSheets ?? 0);
   const [wins, setWins]                 = useState(td?.wins ?? 0);
   const [draws, setDraws]               = useState(td?.draws ?? 0);
-  const [groupWinner, setGroupWinner]   = useState(td?.groupWinner ?? false);
   const [upsets, setUpsets]             = useState(td?.upsets ?? 0);
   const [firstGoals, setFirstGoals]     = useState(td?.firstGoals ?? 0);
 
@@ -2522,10 +2538,6 @@ function TeamProgressEditor({ team, td, color, onSave }) {
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox checked={!!topScorer} onCheckedChange={v => { setTopScorer(!!v); onSave({ topScorer: !!v }); }} />
           <span className="text-xs text-muted-foreground">Top scorer +15</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox checked={!!groupWinner} onCheckedChange={v => { setGroupWinner(!!v); onSave({ groupWinner: !!v }); }} />
-          <span className="text-xs text-muted-foreground">Group winner +10</span>
         </label>
         <div className="flex items-center gap-1.5">
           <Label className="text-xs text-muted-foreground">Wins</Label>
@@ -2800,7 +2812,7 @@ function SweepstakeAdminPanel({ sweepstakes, onClose, onRefresh }) {
                 <div style={{padding:'0 12px 10px',display:'flex',flexWrap:'wrap',gap:4}}>
                   {(p.teams||[]).map(t => {
                     const ti = TEAM_TIER_MAP[t];
-                    const pts = swTeamPts(teamData[t]);
+                    const pts = swTeamPts(teamData[t], computeGroupWinners(teamData).has(t));
                     return (
                       <span key={t} style={{fontSize:12,fontWeight:700,padding:'2px 6px',borderRadius:4,background:`${ti?.color||'#666'}22`,color:ti?.color||'#aaa',border:`1px solid ${ti?.color||'#666'}44`,display:'inline-flex',alignItems:'center',gap:4}}>
                         <TeamLogo name={t} size={13}/>
