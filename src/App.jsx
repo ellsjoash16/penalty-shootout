@@ -55,13 +55,7 @@ const SW_ROUND_LABELS = { r32:'Round of 32', r16:'Round of 16', qf:'Quarter-Fina
 const SW_ROUND_SHORT  = { r32:'R32', r16:'R16', qf:'QF', sf:'SF', runner_up:'Final', winner:'WINNER' };
 const computeGroupWinners = (teamData) => {
   const winners = new Set();
-  // Primary: trust the groupWinner flag set by sync (stored in DB)
-  for (const [team, td] of Object.entries(teamData || {})) {
-    if (td?.groupWinner) winners.add(team);
-  }
-  // Fallback: compute from standings data for groups not yet handled by sync
   Object.values(WC_GROUPS).forEach(teams => {
-    if (teams.some(t => winners.has(t))) return; // already have a winner for this group
     const sorted = [...teams].sort((a, b) => {
       const pts = (teamData[b]?.groupPts || 0) - (teamData[a]?.groupPts || 0);
       if (pts !== 0) return pts;

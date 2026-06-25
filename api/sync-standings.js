@@ -231,17 +231,22 @@ export default async function handler(req, res) {
     }
 
     // ── 3. Re-detect group winners using match-counted gamesPlayed ──
-    // This is more reliable than the standings stats API field name
+    // Sort by groupPts ourselves — do NOT trust ESPN array order (it can be wrong)
     groupWinners.clear();
     for (const group of groups) {
-      const entries = group.standings?.entries || group.entries || [];
-      let validIdx = 0;
-      for (const entry of entries) {
-        const name = norm(entry.team?.displayName || entry.team?.name || '');
-        if (!name) continue;
-        if (validIdx === 0 && (gamesPlayed[name] || 0) >= 3) groupWinners.add(name);
-        validIdx++;
-      }
+      const entries = (group.standings?.entries || group.entries || [])
+        .map(e => norm(e.team?.displayName || e.team?.name || ''))
+        .filter(Boolean);
+      // Sort by groupPts desc, then goal difference desc
+      const sorted = entries.sort((a, b) => {
+        const ptsDiff = (groupStats[b]?.groupPts || 0) - (groupStats[a]?.groupPts || 0);
+        if (ptsDiff !== 0) return ptsDiff;
+        const gdA = (groupStats[a]?.groupGF || 0) - (groupStats[a]?.groupGA || 0);
+        const gdB = (groupStats[b]?.groupGF || 0) - (groupStats[b]?.groupGA || 0);
+        return gdB - gdA;
+      });
+      const leader = sorted[0];
+      if (leader && (gamesPlayed[leader] || 0) >= 3) groupWinners.add(leader);
     }
     // Store accurate gamesPlayed in groupStats
     for (const [name, played] of Object.entries(gamesPlayed)) {
