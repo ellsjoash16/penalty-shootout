@@ -127,17 +127,18 @@ export default async function handler(req, res) {
         const name  = norm(entry.team?.displayName || entry.team?.name || '');
         if (!name) continue;
         const stats = entry.stats || [];
-        const played = stat(stats, 'gamesPlayed');
-        groupStats[name] = {
-          groupPlayed: played,
-          groupGF:     stat(stats, 'pointsFor'),
-          groupGA:     stat(stats, 'pointsAgainst'),
-          groupPts:    stat(stats, 'points'),
-        };
+        // Try multiple ESPN stat name variants for each field
+        const played = stat(stats, 'gamesPlayed') || stat(stats, 'GP') || stat(stats, 'played') || stat(stats, 'GamesPlayed');
+        const gf     = stat(stats, 'pointsFor')   || stat(stats, 'GF') || stat(stats, 'goalsFor');
+        const ga     = stat(stats, 'pointsAgainst')|| stat(stats, 'GA') || stat(stats, 'goalsAgainst');
+        const pts    = stat(stats, 'points')       || stat(stats, 'PTS')|| stat(stats, 'pts');
+        groupStats[name] = { groupPlayed: played, groupGF: gf, groupGA: ga, groupPts: pts };
         // First valid entry is the group leader (ESPN returns in standings order)
         if (validIdx === 0) {
           debugEntry.leader = name;
           debugEntry.played = played;
+          debugEntry.pts = pts;
+          debugEntry.rawStatNames = stats.slice(0, 5).map(s => s.name || s.shortDisplayName);
           if (played >= 3) groupWinners.add(name);
         }
         validIdx++;
