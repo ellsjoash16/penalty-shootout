@@ -103,6 +103,7 @@ export default async function handler(req, res) {
 
   try {
     const groupStats   = {};  // teamName → { groupPlayed, groupGF, groupGA, groupPts }
+    const gamesPlayed  = {};  // teamName → completed group stage matches (counted from events)
     const reached      = {};  // teamName → highest knockout round
     const wins         = {};  // teamName → total wins across all matches
     const draws        = {};  // teamName → total draws (group stage)
@@ -205,8 +206,12 @@ export default async function handler(req, res) {
         if (s1 === 0) cleanSheets[away] = (cleanSheets[away] || 0) + 1;
       }
 
-      // Bracket structure + reached — knockout only
-      if (!isFinal && round === undefined) continue;
+      // Count completed group stage matches (not knockout)
+      if (!isFinal && round === undefined) {
+        if (completed && home) gamesPlayed[home] = (gamesPlayed[home] || 0) + 1;
+        if (completed && away) gamesPlayed[away] = (gamesPlayed[away] || 0) + 1;
+        continue;
+      }
 
       const match = { t1: home || null, t2: away || null, s1, s2, winner };
 
@@ -225,7 +230,25 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── 3. Top scorer — only once tournament is complete ─────────
+    // ── 3. Re-detect group winners using match-counted gamesPlayed ──
+    // This is more reliable than the standings stats API field name
+    groupWinners.clear();
+    for (const group of groups) {
+      const entries = group.standings?.entries || group.entries || [];
+      let validIdx = 0;
+      for (const entry of entries) {
+        const name = norm(entry.team?.displayName || entry.team?.name || '');
+        if (!name) continue;
+        if (validIdx === 0 && (gamesPlayed[name] || 0) >= 3) groupWinners.add(name);
+        validIdx++;
+      }
+    }
+    // Store accurate gamesPlayed in groupStats
+    for (const [name, played] of Object.entries(gamesPlayed)) {
+      if (groupStats[name]) groupStats[name].groupPlayed = played;
+    }
+
+    // ── 4. Top scorer — only once tournament is complete ─────────
     if (wcBracket.final?.winner) {
       try {
         const tsRes  = await fetch(ESPN_TOP_SCORERS, { headers: { 'User-Agent': 'Mozilla/5.0' } });
@@ -240,7 +263,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── 4. Write to state ─────────────────────────────────────────
+    // ── 5. Write to state ─────────────────────────────────────────
     await atomicUpdate(state => {
       const sweepstakes = (state.sweepstakes || []).map(sw => {
         const td = { ...(sw.teamData || {}) };
@@ -277,6 +300,7 @@ export default async function handler(req, res) {
       debug: {
         groupsParsed:   debugGroups.length,
         groupWinners:   [...groupWinners],
+        gamesPlayedSample: Object.fromEntries(Object.entries(gamesPlayed).slice(0, 12)),
         groups:         debugGroups,
       },
     });
