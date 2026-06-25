@@ -115,11 +115,15 @@ export default async function handler(req, res) {
     const sRes  = await fetch(ESPN_STANDINGS, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     const sData = await sRes.json();
 
-    // WC standings — groups live under sData.children[] each with standings.entries[]
-    const groups = sData.children || [];
+    // WC standings: try top-level children first, then one level deeper (48-team WC nests under a conference)
+    const topGroups = sData.children || [];
+    const groups = (topGroups[0]?.children?.length ? topGroups.flatMap(c => c.children || []) : topGroups);
+    const debugGroups = [];
     for (const group of groups) {
       const entries = group.standings?.entries || group.entries || [];
-      for (const [i, entry] of entries.entries()) {
+      let validIdx = 0; // track position among entries with a valid name
+      const debugEntry = { groupName: group.name || group.abbreviation || '?', leader: null, played: null };
+      for (const entry of entries) {
         const name  = norm(entry.team?.displayName || entry.team?.name || '');
         if (!name) continue;
         const stats = entry.stats || [];
@@ -130,9 +134,15 @@ export default async function handler(req, res) {
           groupGA:     stat(stats, 'pointsAgainst'),
           groupPts:    stat(stats, 'points'),
         };
-        // Mark as group winner only once all 3 group games are played
-        if (i === 0 && played >= 3) groupWinners.add(name);
+        // First valid entry is the group leader (ESPN returns in standings order)
+        if (validIdx === 0) {
+          debugEntry.leader = name;
+          debugEntry.played = played;
+          if (played >= 3) groupWinners.add(name);
+        }
+        validIdx++;
       }
+      debugGroups.push(debugEntry);
     }
 
     // ── 2. Knockout results + bracket structure from ESPN scoreboard ──
@@ -263,6 +273,11 @@ export default async function handler(req, res) {
       upsetsDetected:     Object.keys(upsets).length,
       topScorerTeam:      topScorerTeam || 'tournament not complete',
       syncedAt:           new Date().toISOString(),
+      debug: {
+        groupsParsed:   debugGroups.length,
+        groupWinners:   [...groupWinners],
+        groups:         debugGroups,
+      },
     });
 
   } catch (e) {
