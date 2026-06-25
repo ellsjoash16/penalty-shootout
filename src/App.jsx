@@ -64,9 +64,7 @@ const computeGroupWinners = (teamData) => {
       return gdb - gda;
     });
     const top = sorted[0];
-    if (top && ((teamData[top]?.groupPlayed ?? 0) >= 3 || teamData[top]?.groupWinner)) {
-      winners.add(top);
-    }
+    if (top && teams.every(t => (teamData[t]?.groupPlayed ?? 0) >= 3)) winners.add(top);
   });
   return winners;
 };
@@ -76,7 +74,7 @@ const swTeamPts = (td, isGroupWinner = false) => {
   const idx = SW_ROUNDS.indexOf(td.reached);
   if (idx >= 0) for (let i = 0; i <= idx; i++) pts += SW_ROUND_PTS[SW_ROUNDS[i]];
   if (td.topScorer) pts += 15;
-  if (isGroupWinner) pts += 10;
+  if (isGroupWinner || td.groupWinner) pts += 10;
   pts += (td.cleanSheets || 0) * 5;
   pts += (td.wins || 0) * 3;
   pts += (td.draws || 0) * 1;
