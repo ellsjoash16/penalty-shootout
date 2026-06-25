@@ -56,7 +56,7 @@ const SW_ROUND_SHORT  = { r32:'R32', r16:'R16', qf:'QF', sf:'SF', runner_up:'Fin
 const computeGroupWinners = (teamData) => {
   const winners = new Set();
   Object.values(WC_GROUPS).forEach(teams => {
-    if (!teams.every(t => (teamData[t]?.groupPlayed ?? 0) >= 3)) return;
+    if (!teams.some(t => (teamData[t]?.groupPts ?? 0) > 0)) return;
     const sorted = [...teams].sort((a, b) => {
       const pts = (teamData[b]?.groupPts || 0) - (teamData[a]?.groupPts || 0);
       if (pts !== 0) return pts;
