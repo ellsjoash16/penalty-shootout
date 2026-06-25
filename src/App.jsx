@@ -3601,9 +3601,9 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
   const [menuOpen, setMenuOpen] = useState(false);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [managing, setManaging] = useState(!!startManaging);
-  const [swMode, setSwMode] = useState(isAdmin ? (initialSwMode || 'bracket') : 'sweepstake');
+  const [swMode, setSwMode] = useState(initialSwMode || 'bracket');
   const [selectedSwId, setSelectedSwId] = useState(null);
-  useEffect(() => { setSwMode(isAdmin ? (initialSwMode || 'bracket') : 'sweepstake'); }, [initialSwMode, isAdmin]);
+  useEffect(() => { setSwMode(initialSwMode || 'bracket'); }, [initialSwMode]);
   useEffect(() => { if (swMode !== 'sweepstake') setSelectedSwId(null); }, [swMode]);
   const needsCode = !isAdmin && !localStorage.getItem('psc_tcode') && swMode !== 'sweepstake';
   const needsPick = !isAdmin && swMode !== 'sweepstake' && !!bracket && bracket.stage !== 'champion' && (() => {
