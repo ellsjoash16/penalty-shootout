@@ -4004,12 +4004,12 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
               <div>
                 <div style={{fontSize:12,fontWeight:800,letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(255,255,255,0.35)',marginBottom:10}}>Bonus points</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'8px 20px'}}>
-                  {[['Draw (any game)','+1 pt each'],['Win (any game)','+3 pts each'],['Top of group','+10 pts'],['Clean sheet (any game)','+5 pts each'],['Top scorer in tournament','+15 pts'],['Upset win (ranked >25 beats a top-25 team)','+6 pts (+3 bonus)']].map(([k,v]) => (
+                  {[['Draw (any game)','+1 pt each'],['Win (any game)','+3 pts each'],['Score 4+ goals in a win','+6 pts (+3 bonus)'],['Top of group','+10 pts'],['Clean sheet (any game)','+5 pts each'],['Top scorer in tournament','+15 pts'],['Upset win (ranked >25 beats a top-25 team)','+6 pts (+3 bonus)']].map(([k,v]) => (
                     <><span key={k} style={{color:'rgba(255,255,255,0.7)',fontSize:14}}>{k}</span><span key={v} style={{color:'#ffc107',fontWeight:800,textAlign:'right',fontSize:15}}>{v}</span></>
                   ))}
                 </div>
               </div>
-              <p style={{margin:0,fontSize:12,color:'rgba(255,255,255,0.3)'}}>Upset wins also earn the regular +3 win bonus, so an upset win = +6 pts total. Points accumulate across all your teams. The person with the most points at the end wins!</p>
+              <p style={{margin:0,fontSize:12,color:'rgba(255,255,255,0.3)'}}>Upset wins and 4+ goal wins also earn the regular +3 win bonus, so both = +6 pts total. Points accumulate across all your teams. The person with the most points at the end wins!</p>
             </div>
           )}
         </DialogContent>
