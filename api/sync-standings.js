@@ -158,13 +158,14 @@ export default async function handler(req, res) {
       return res.json({ ok: false, skipped: true, reason: 'match in progress', match: liveMatch.name });
     }
 
+    // ESPN uses season.slug for round identification (comp.type.text is empty)
     const ROUND_MAP = {
-      'Round of 32':    'r32',
-      'Round of 16':    'r16',
-      'Quarterfinals':  'qf',
-      'Semifinals':     'sf',
-      'Third Place':    null,
-      'Final':          null,
+      'round-of-32':     'r32',
+      'round-of-16':     'r16',
+      'quarterfinals':   'qf',
+      'semifinals':      'sf',
+      '3rd-place-match': null,
+      'final':           null,
     };
 
     const wcBracket = { r32: [], r16: [], qf: [], sf: [], final: null };
@@ -173,9 +174,9 @@ export default async function handler(req, res) {
       const comp = event.competitions?.[0];
       if (!comp) continue;
 
-      const roundText = comp.type?.text || comp.notes?.[0]?.headline || '';
+      const roundText = event.season?.slug || '';
       const round = ROUND_MAP[roundText];
-      const isFinal = roundText === 'Final';
+      const isFinal = roundText === 'final';
 
       const homeComp = comp.competitors?.find(c => c.homeAway === 'home');
       const awayComp = comp.competitors?.find(c => c.homeAway === 'away');
