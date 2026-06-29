@@ -177,6 +177,7 @@ export default async function handler(req, res) {
       const roundText = event.season?.slug || '';
       const round = ROUND_MAP[roundText];
       const isFinal = roundText === 'final';
+      const isKnockout = roundText !== 'group-stage' && roundText !== '';
 
       const homeComp = comp.competitors?.find(c => c.homeAway === 'home');
       const awayComp = comp.competitors?.find(c => c.homeAway === 'away');
@@ -196,7 +197,7 @@ export default async function handler(req, res) {
         const goalsScored   = homeWon ? s1 : s2;
         const goalsConceded = homeWon ? s2 : s1;
         if (goalsConceded === 0) cleanSheets[winner] = (cleanSheets[winner] || 0) + 1;
-        if (goalsScored > 3)    bigWins[winner]      = (bigWins[winner]      || 0) + 1;
+        if (isKnockout && goalsScored >= 3) bigWins[winner] = (bigWins[winner] || 0) + 1;
         // Upset: winner ranked >25, loser ranked ≤25
         const winnerRank = FIFA_RANK[winner] ?? 999;
         const loserRank  = FIFA_RANK[loser]  ?? 999;

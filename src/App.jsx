@@ -79,7 +79,7 @@ const swTeamPts = (td, isGroupWinner = false) => {
   pts += (td.wins || 0) * 3;
   pts += (td.draws || 0) * 1;
   pts += (td.upsets || 0) * 3;
-  pts += (td.bigWins || 0) * 3;
+  pts += (td.bigWins  || 0) * 3;
   pts += (td.firstGoals || 0) * 2;
   return pts;
 };
@@ -4004,7 +4004,7 @@ function TournamentScreen({ bracket, wcBracket, myCode, setMyCode, isAdmin, swee
               <div>
                 <div style={{fontSize:12,fontWeight:800,letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(255,255,255,0.35)',marginBottom:10}}>Bonus points</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'8px 20px'}}>
-                  {[['Draw (any game)','+1 pt each'],['Win (any game)','+3 pts each'],['Score 4+ goals in a win','+6 pts (+3 bonus)'],['Top of group','+10 pts'],['Clean sheet (any game)','+5 pts each'],['Top scorer in tournament','+15 pts'],['Upset win (ranked >25 beats a top-25 team)','+6 pts (+3 bonus)']].map(([k,v]) => (
+                  {[['Draw (any game)','+1 pt each'],['Win (any game)','+3 pts each'],['Score 3+ goals in a knockout win (R32 onwards)','+6 pts (+3 bonus)'],['Top of group','+10 pts'],['Clean sheet (any game)','+5 pts each'],['Top scorer in tournament','+15 pts'],['Upset win (ranked >25 beats a top-25 team)','+6 pts (+3 bonus)']].map(([k,v]) => (
                     <><span key={k} style={{color:'rgba(255,255,255,0.7)',fontSize:14}}>{k}</span><span key={v} style={{color:'#ffc107',fontWeight:800,textAlign:'right',fontSize:15}}>{v}</span></>
                   ))}
                 </div>
