@@ -109,6 +109,7 @@ export default async function handler(req, res) {
     const draws        = {};  // teamName → total draws (group stage)
     const cleanSheets  = {};  // teamName → total clean sheets across all matches
     const upsets       = {};  // teamName → upset wins (ranked >25 beating a team ranked ≤25)
+    const bigWins      = {};  // teamName → wins where the team scored 4+ goals
     const groupWinners = new Set(); // teams that finished top of their group
     let   topScorerTeam = null; // only set after tournament is complete
 
@@ -187,12 +188,14 @@ export default async function handler(req, res) {
       const s2 = completed && awayComp?.score != null ? parseInt(awayComp.score) : null;
       const winner = completed ? (homeWon ? home : awayWon ? away : null) : null;
 
-      // Count wins + draws + clean sheets + upsets for every completed match
+      // Count wins + draws + clean sheets + upsets + big wins for every completed match
       if (completed && winner) {
         const loser = winner === home ? away : home;
         wins[winner] = (wins[winner] || 0) + 1;
+        const goalsScored   = homeWon ? s1 : s2;
         const goalsConceded = homeWon ? s2 : s1;
         if (goalsConceded === 0) cleanSheets[winner] = (cleanSheets[winner] || 0) + 1;
+        if (goalsScored > 3)    bigWins[winner]      = (bigWins[winner]      || 0) + 1;
         // Upset: winner ranked >25, loser ranked ≤25
         const winnerRank = FIFA_RANK[winner] ?? 999;
         const loserRank  = FIFA_RANK[loser]  ?? 999;
@@ -280,7 +283,7 @@ export default async function handler(req, res) {
         }
         // Reset computed match stats for all teams so stale values don't persist
         for (const t of Object.keys(td)) {
-          td[t] = { ...(td[t] || {}), wins: wins[t] || 0, draws: draws[t] || 0, cleanSheets: cleanSheets[t] || 0, upsets: upsets[t] || 0, groupWinner: groupWinners.has(t) };
+          td[t] = { ...(td[t] || {}), wins: wins[t] || 0, draws: draws[t] || 0, cleanSheets: cleanSheets[t] || 0, upsets: upsets[t] || 0, bigWins: bigWins[t] || 0, groupWinner: groupWinners.has(t) };
         }
         // Set topScorer only after tournament ends; clears any previous auto-set value
         if (topScorerTeam) {

@@ -79,6 +79,7 @@ const swTeamPts = (td, isGroupWinner = false) => {
   pts += (td.wins || 0) * 3;
   pts += (td.draws || 0) * 1;
   pts += (td.upsets || 0) * 3;
+  pts += (td.bigWins || 0) * 3;
   pts += (td.firstGoals || 0) * 2;
   return pts;
 };
